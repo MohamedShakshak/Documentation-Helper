@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 from langchain.agents import create_agent
@@ -5,7 +6,17 @@ from langchain.messages import ToolMessage
 from langchain.tools import tool
 from langchain_core.language_models import BaseChatModel
 
+from doc_helper.agents.events import (
+    AnswerEvent,
+    DoneEvent,
+    ErrorEvent,
+    EventType,
+    SSEEvent,
+    ToolCallEvent,
+    ToolResultEvent,
+)
 from doc_helper.config.settings import Settings
+from doc_helper.db.conversations import ConversationManager
 from doc_helper.retrieval.retriever import Retriever
 
 
@@ -33,40 +44,141 @@ _SYSTEM_PROMPT = (
 
 
 class RAGAgent:
-    def __init__(self, llm: BaseChatModel, retriever: Retriever):
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        retriever: Retriever,
+        conversation_manager: ConversationManager | None = None,
+    ):
         self._llm = llm
         self._retriever = retriever
+        self._conversation_manager = conversation_manager
         self._tool = _make_retrieval_tool(retriever)
         self._agent = create_agent(
             self._llm, tools=[self._tool], system_prompt=_SYSTEM_PROMPT
         )
 
-    def run(self, query: str) -> dict[str, Any]:
-        response = self._agent.invoke({"messages": [{"role": "user", "content": query}]})
+    def run(self, query: str, conversation_id: str | None = None) -> dict[str, Any]:
+        messages = self._build_messages(query, conversation_id)
+        response = self._agent.invoke({"messages": messages})
+        answer, context_docs, sources = self._extract_response(response)
+
+        if self._conversation_manager and conversation_id:
+            self._conversation_manager.add_message(conversation_id, "assistant", answer, sources)
+
+        return {"answer": answer, "context": context_docs, "sources": sources}
+
+    def stream(self, query: str, conversation_id: str | None = None) -> Generator[SSEEvent, None, None]:
+        try:
+            messages = self._build_messages(query, conversation_id)
+            for event in self._agent.astream_events({"messages": messages}, version="v2"):
+                kind = event["event"]
+                data = event.get("data", {})
+
+                if kind == "on_chat_model_stream":
+                    chunk = data.get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield AnswerEvent(content=chunk.content)
+
+                elif kind == "on_tool_start":
+                    tool_input = data.get("input", {})
+                    yield ToolCallEvent(
+                        tool=event.get("name", "retrieve_context"),
+                        query=tool_input.get("query", ""),
+                    )
+
+                elif kind == "on_tool_end":
+                    artifact = data.get("output")
+                    sources = []
+                    if isinstance(artifact, list):
+                        sources = [
+                            doc.metadata.get("source", "Unknown")
+                            for doc in artifact
+                            if hasattr(doc, "metadata")
+                        ]
+                    yield ToolResultEvent(sources=sources, num_docs=len(sources))
+
+            sources = []
+            if self._conversation_manager and conversation_id:
+                self._conversation_manager.add_message(conversation_id, "assistant", "", sources)
+            yield DoneEvent(conversation_id=conversation_id or "", sources=sources)
+
+        except Exception as e:
+            yield ErrorEvent(message=str(e))
+
+    async def astream(
+        self, query: str, conversation_id: str | None = None
+    ) -> AsyncGenerator[SSEEvent, None]:
+        try:
+            messages = self._build_messages(query, conversation_id)
+            async for event in self._agent.astream_events({"messages": messages}, version="v2"):
+                kind = event["event"]
+                data = event.get("data", {})
+
+                if kind == "on_chat_model_stream":
+                    chunk = data.get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield AnswerEvent(content=chunk.content)
+
+                elif kind == "on_tool_start":
+                    tool_input = data.get("input", {})
+                    yield ToolCallEvent(
+                        tool=event.get("name", "retrieve_context"),
+                        query=tool_input.get("query", ""),
+                    )
+
+                elif kind == "on_tool_end":
+                    artifact = data.get("output")
+                    sources = []
+                    if isinstance(artifact, list):
+                        sources = [
+                            doc.metadata.get("source", "Unknown")
+                            for doc in artifact
+                            if hasattr(doc, "metadata")
+                        ]
+                    yield ToolResultEvent(sources=sources, num_docs=len(sources))
+
+            sources = []
+            if self._conversation_manager and conversation_id:
+                self._conversation_manager.add_message(conversation_id, "assistant", "", sources)
+            yield DoneEvent(conversation_id=conversation_id or "", sources=sources)
+
+        except Exception as e:
+            yield ErrorEvent(message=str(e))
+
+    def _build_messages(self, query: str, conversation_id: str | None = None) -> list[dict]:
+        messages = []
+        if self._conversation_manager and conversation_id:
+            history = self._conversation_manager.get_messages(conversation_id)
+            for msg in history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": query})
+
+        if self._conversation_manager and conversation_id:
+            self._conversation_manager.add_message(conversation_id, "user", query)
+
+        return messages
+
+    def _extract_response(self, response: dict) -> tuple[str, list, list[str]]:
         answer = response["messages"][-1].content
         context_docs = []
+        sources = []
         for message in response["messages"]:
             if isinstance(message, ToolMessage) and hasattr(message, "artifact"):
                 if isinstance(message.artifact, list):
                     context_docs.extend(message.artifact)
-        return {"answer": answer, "context": context_docs}
-
-    async def arun(self, query: str) -> dict[str, Any]:
-        response = await self._agent.ainvoke(
-            {"messages": [{"role": "user", "content": query}]}
-        )
-        answer = response["messages"][-1].content
-        context_docs = []
-        for message in response["messages"]:
-            if isinstance(message, ToolMessage) and hasattr(message, "artifact"):
-                if isinstance(message.artifact, list):
-                    context_docs.extend(message.artifact)
-        return {"answer": answer, "context": context_docs}
+                    for doc in message.artifact:
+                        if hasattr(doc, "metadata"):
+                            sources.append(doc.metadata.get("source", "Unknown"))
+        return str(answer), context_docs, sources
 
 
-def create_rag_agent(settings: Settings | None = None) -> RAGAgent:
+def create_rag_agent(
+    settings: Settings | None = None,
+    conversation_manager: ConversationManager | None = None,
+) -> RAGAgent:
     from doc_helper.config.settings import Settings as _Settings
-    from doc_helper.embeddings.factory import create_embeddings, get_embedding_model_name
+    from doc_helper.embeddings.factory import create_embeddings
     from doc_helper.llm.factory import create_chat_model
     from doc_helper.stores.factory import create_vector_store
 
@@ -76,12 +188,11 @@ def create_rag_agent(settings: Settings | None = None) -> RAGAgent:
     llm = create_chat_model(settings.llm)
     store = create_vector_store(settings)
     embeddings = create_embeddings(settings.embedding)
-    model_key = settings.embedding.model
 
     from doc_helper.stores.base import BaseVectorStore
 
     if isinstance(store, BaseVectorStore):
-        store.validate_embedding_model(model_key)
+        store.validate_embedding_model(settings.embedding.model)
 
     retriever = Retriever(store, settings.retrieval)
-    return RAGAgent(llm=llm, retriever=retriever)
+    return RAGAgent(llm=llm, retriever=retriever, conversation_manager=conversation_manager)
