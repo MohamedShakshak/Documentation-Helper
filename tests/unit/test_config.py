@@ -103,6 +103,8 @@ class TestSettings:
         assert settings.ingestion.crawler == "tavily"
         assert settings.observability.enabled is False
         assert settings.database.url == "sqlite:///./data/doc_helper.db"
+        assert settings.agent.max_tool_retries == 2
+        assert settings.agent.guardrails_enabled is True
 
     def test_nested_override(self):
         settings = Settings(llm=LLMSettings(provider="openrouter", openrouter_api_key="sk-test"))

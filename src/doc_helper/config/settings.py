@@ -69,6 +69,18 @@ class DatabaseSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DATABASE__")
 
 
+class AgentSettings(BaseSettings):
+    max_tool_retries: int = 2
+    guardrails_enabled: bool = True
+    guardrails_max_input_length: int = 2000
+    summarization_enabled: bool = True
+    summarization_threshold: int = 20
+    model_fallback_enabled: bool = True
+    fallback_model: str | None = None
+
+    model_config = SettingsConfigDict(env_prefix="AGENT__")
+
+
 class Settings(BaseSettings):
     llm: LLMSettings = LLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
@@ -77,6 +89,7 @@ class Settings(BaseSettings):
     ingestion: IngestionSettings = IngestionSettings()
     observability: ObservabilitySettings = ObservabilitySettings()
     database: DatabaseSettings = DatabaseSettings()
+    agent: AgentSettings = AgentSettings()
 
     model_config = SettingsConfigDict(
         env_file=".env",

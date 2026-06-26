@@ -3,7 +3,6 @@ from typing import Any
 
 from langchain.agents import create_agent
 from langchain.messages import ToolMessage
-from langchain.tools import tool
 from langchain_core.language_models import BaseChatModel
 
 from doc_helper.agents.events import (
@@ -15,32 +14,27 @@ from doc_helper.agents.events import (
     ToolCallEvent,
     ToolResultEvent,
 )
-from doc_helper.config.settings import Settings
+from doc_helper.agents.middleware import (
+    guardrails_middleware,
+    summarization_middleware,
+)
+from doc_helper.agents.tools import create_tools
+from doc_helper.config.settings import AgentSettings, Settings
 from doc_helper.db.conversations import ConversationManager
 from doc_helper.retrieval.retriever import Retriever
 
-
-def _make_retrieval_tool(retriever: Retriever):
-    @tool(response_format="content_and_artifact")
-    def retrieve_context(query: str):
-        """Retrieve relevant documentation to help answer user queries about LangChain."""
-        retrieved_docs = retriever.retrieve(query)
-        serialized = "\n\n".join(
-            f"Source: {doc.metadata.get('source_url', doc.metadata.get('source', 'Unknown'))}\n\n"
-            f"Content: {doc.page_content}"
-            for doc in retrieved_docs
-        )
-        return serialized, retrieved_docs
-
-    return retrieve_context
-
-
 _SYSTEM_PROMPT = (
-    "You are a helpful AI assistant that answers questions about LangChain documentation. "
-    "You have access to a tool that retrieves relevant documentation. "
-    "Use the tool to find relevant information before answering questions. "
-    "Always cite the sources you use in your answers. "
-    "If you cannot find the answer in the retrieved documentation, say so."
+    "You are a helpful AI assistant that answers questions about LangChain documentation.\n"
+    "You have access to the following tools:\n"
+    "1. retrieve_context — Search the local ingested documentation (use this FIRST).\n"
+    "2. web_search — Search the web for information not found locally.\n"
+    "3. check_links — Verify whether specific URLs are reachable.\n\n"
+    "Guidelines:\n"
+    "- Always try retrieve_context before web_search.\n"
+    "- If retrieve_context doesn't find relevant info, use web_search.\n"
+    "- Use check_links only when the user asks about URL validity.\n"
+    "- Always cite sources you use in your answers.\n"
+    "- If you cannot find the answer, say so honestly."
 )
 
 
@@ -50,16 +44,36 @@ class RAGAgent:
         llm: BaseChatModel,
         retriever: Retriever,
         conversation_manager: ConversationManager | None = None,
+        agent_settings: AgentSettings | None = None,
+        ingestion_settings: Any | None = None,
+        enable_web_search: bool = True,
     ):
         self._llm = llm
         self._retriever = retriever
         self._conversation_manager = conversation_manager
-        self._tool = _make_retrieval_tool(retriever)
+        self._agent_settings = agent_settings or AgentSettings()
+
+        self._tools = create_tools(
+            retriever=retriever,
+            ingestion_settings=ingestion_settings,
+            enable_web_search=enable_web_search,
+        )
         self._agent = create_agent(
-            self._llm, tools=[self._tool], system_prompt=_SYSTEM_PROMPT
+            self._llm, tools=self._tools, system_prompt=_SYSTEM_PROMPT
+        )
+
+        self._guardrails = guardrails_middleware(self._agent_settings)
+        self._summarize = summarization_middleware(
+            conversation_manager, llm, self._agent_settings
         )
 
     def run(self, query: str, conversation_id: str | None = None) -> dict[str, Any]:
+        guardrail_error = self._guardrails(query)
+        if guardrail_error:
+            return {"answer": guardrail_error, "context": [], "sources": []}
+
+        self._summarize(conversation_id)
+
         messages = self._build_messages(query, conversation_id)
         response = self._agent.invoke({"messages": messages})
         answer, context_docs, sources = self._extract_response(response)
@@ -70,34 +84,17 @@ class RAGAgent:
         return {"answer": answer, "context": context_docs, "sources": sources}
 
     def stream(self, query: str, conversation_id: str | None = None) -> Generator[SSEEvent, None, None]:
+        guardrail_error = self._guardrails(query)
+        if guardrail_error:
+            yield ErrorEvent(message=guardrail_error)
+            return
+
+        self._summarize(conversation_id)
+
         try:
             messages = self._build_messages(query, conversation_id)
             for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                kind = event["event"]
-                data = event.get("data", {})
-
-                if kind == "on_chat_model_stream":
-                    chunk = data.get("chunk")
-                    if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield AnswerEvent(content=chunk.content)
-
-                elif kind == "on_tool_start":
-                    tool_input = data.get("input", {})
-                    yield ToolCallEvent(
-                        tool=event.get("name", "retrieve_context"),
-                        query=tool_input.get("query", ""),
-                    )
-
-                elif kind == "on_tool_end":
-                    artifact = data.get("output")
-                    sources = []
-                    if isinstance(artifact, list):
-                        sources = [
-                            doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
-                            for doc in artifact
-                            if hasattr(doc, "metadata")
-                        ]
-                    yield ToolResultEvent(sources=sources, num_docs=len(sources))
+                yield from self._process_stream_event(event)
 
             sources = []
             if self._conversation_manager and conversation_id:
@@ -110,34 +107,18 @@ class RAGAgent:
     async def astream(
         self, query: str, conversation_id: str | None = None
     ) -> AsyncGenerator[SSEEvent, None]:
+        guardrail_error = self._guardrails(query)
+        if guardrail_error:
+            yield ErrorEvent(message=guardrail_error)
+            return
+
+        self._summarize(conversation_id)
+
         try:
             messages = self._build_messages(query, conversation_id)
             async for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                kind = event["event"]
-                data = event.get("data", {})
-
-                if kind == "on_chat_model_stream":
-                    chunk = data.get("chunk")
-                    if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield AnswerEvent(content=chunk.content)
-
-                elif kind == "on_tool_start":
-                    tool_input = data.get("input", {})
-                    yield ToolCallEvent(
-                        tool=event.get("name", "retrieve_context"),
-                        query=tool_input.get("query", ""),
-                    )
-
-                elif kind == "on_tool_end":
-                    artifact = data.get("output")
-                    sources = []
-                    if isinstance(artifact, list):
-                        sources = [
-                            doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
-                            for doc in artifact
-                            if hasattr(doc, "metadata")
-                        ]
-                    yield ToolResultEvent(sources=sources, num_docs=len(sources))
+                for sse_event in self._process_stream_event(event):
+                    yield sse_event
 
             sources = []
             if self._conversation_manager and conversation_id:
@@ -146,6 +127,33 @@ class RAGAgent:
 
         except Exception as e:
             yield ErrorEvent(message=str(e))
+
+    def _process_stream_event(self, event: dict) -> Generator[SSEEvent, None, None]:
+        kind = event["event"]
+        data = event.get("data", {})
+
+        if kind == "on_chat_model_stream":
+            chunk = data.get("chunk")
+            if chunk and hasattr(chunk, "content") and chunk.content:
+                yield AnswerEvent(content=chunk.content)
+
+        elif kind == "on_tool_start":
+            tool_input = data.get("input", {})
+            yield ToolCallEvent(
+                tool=event.get("name", "unknown"),
+                query=str(tool_input.get("query", tool_input.get("urls", ""))),
+            )
+
+        elif kind == "on_tool_end":
+            artifact = data.get("output")
+            sources: list[str] = []
+            if isinstance(artifact, list):
+                sources = [
+                    doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
+                    for doc in artifact
+                    if hasattr(doc, "metadata")
+                ]
+            yield ToolResultEvent(sources=sources, num_docs=len(sources))
 
     def _build_messages(self, query: str, conversation_id: str | None = None) -> list[dict]:
         messages = []
@@ -170,7 +178,9 @@ class RAGAgent:
                     context_docs.extend(message.artifact)
                     for doc in message.artifact:
                         if hasattr(doc, "metadata"):
-                            sources.append(doc.metadata.get("source_url", doc.metadata.get("source", "Unknown")))
+                            sources.append(
+                                doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
+                            )
         return str(answer), context_docs, sources
 
 
@@ -196,4 +206,14 @@ def create_rag_agent(
         store.validate_embedding_model(settings.embedding.model)
 
     retriever = Retriever(store, settings.retrieval)
-    return RAGAgent(llm=llm, retriever=retriever, conversation_manager=conversation_manager)
+
+    enable_web_search = bool(settings.ingestion.tavily_api_key)
+
+    return RAGAgent(
+        llm=llm,
+        retriever=retriever,
+        conversation_manager=conversation_manager,
+        agent_settings=settings.agent,
+        ingestion_settings=settings.ingestion,
+        enable_web_search=enable_web_search,
+    )

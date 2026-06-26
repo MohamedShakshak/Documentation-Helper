@@ -81,3 +81,28 @@ class ConversationManager:
         cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
         cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         self._db.connection.commit()
+
+    def get_message_count(self, conversation_id: str) -> int:
+        cursor = self._db.connection.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) as cnt FROM messages WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        return cursor.fetchone()["cnt"]
+
+    def replace_messages(
+        self, conversation_id: str, new_messages: list[dict]
+    ) -> None:
+        cursor = self._db.connection.cursor()
+        cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
+        for msg in new_messages:
+            cursor.execute(
+                "INSERT INTO messages (conversation_id, role, content, sources) VALUES (?, ?, ?, ?)",
+                (
+                    conversation_id,
+                    msg["role"],
+                    msg["content"],
+                    json.dumps(msg.get("sources", [])) if msg.get("sources") else None,
+                ),
+            )
+        self._db.connection.commit()
