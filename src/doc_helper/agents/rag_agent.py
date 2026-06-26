@@ -26,7 +26,8 @@ def _make_retrieval_tool(retriever: Retriever):
         """Retrieve relevant documentation to help answer user queries about LangChain."""
         retrieved_docs = retriever.retrieve(query)
         serialized = "\n\n".join(
-            f"Source: {doc.metadata.get('source', 'Unknown')}\n\nContent: {doc.page_content}"
+            f"Source: {doc.metadata.get('source_url', doc.metadata.get('source', 'Unknown'))}\n\n"
+            f"Content: {doc.page_content}"
             for doc in retrieved_docs
         )
         return serialized, retrieved_docs
@@ -92,7 +93,7 @@ class RAGAgent:
                     sources = []
                     if isinstance(artifact, list):
                         sources = [
-                            doc.metadata.get("source", "Unknown")
+                            doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
                             for doc in artifact
                             if hasattr(doc, "metadata")
                         ]
@@ -132,7 +133,7 @@ class RAGAgent:
                     sources = []
                     if isinstance(artifact, list):
                         sources = [
-                            doc.metadata.get("source", "Unknown")
+                            doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
                             for doc in artifact
                             if hasattr(doc, "metadata")
                         ]
@@ -169,7 +170,7 @@ class RAGAgent:
                     context_docs.extend(message.artifact)
                     for doc in message.artifact:
                         if hasattr(doc, "metadata"):
-                            sources.append(doc.metadata.get("source", "Unknown"))
+                            sources.append(doc.metadata.get("source_url", doc.metadata.get("source", "Unknown")))
         return str(answer), context_docs, sources
 
 

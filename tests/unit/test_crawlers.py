@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.documents import Document
 
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
@@ -15,31 +14,6 @@ class TestTavilyCrawler:
         settings = IngestionSettings(tavily_api_key=None)
         with pytest.raises(ValueError, match="TAVILY_API_KEY"):
             TavilyCrawler(settings)
-
-    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
-    def test_crawl_returns_raw_results(self, mock_tavily_cls):
-        mock_client = MagicMock()
-        mock_tavily_cls.return_value = mock_client
-        mock_client.invoke.return_value = {
-            "results": [
-                {"url": "https://example.com/page1", "raw_content": "Content 1"},
-                {"url": "https://example.com/page2", "raw_content": "Content 2"},
-            ]
-        }
-
-        settings = IngestionSettings(tavily_api_key="tvly-test")
-        crawler = TavilyCrawler(settings)
-        results = MagicMock()
-        mock_client.invoke.return_value = results
-
-        crawler._client = mock_client
-        mock_client.invoke.return_value = {
-            "results": [
-                {"url": "https://example.com/page1", "raw_content": "Content 1"},
-                {"url": "https://example.com/page2", "raw_content": "Content 2"},
-            ]
-        }
-        raw = crawler.crawl()
 
     @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
     def test_to_documents(self, mock_tavily_cls):
@@ -56,7 +30,41 @@ class TestTavilyCrawler:
         docs = crawler.to_documents(raw)
         assert len(docs) == 2
         assert docs[0].page_content == "Content 1"
-        assert docs[0].metadata["source"] == "https://example.com/page1"
+
+    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
+    def test_to_documents_metadata(self, mock_cls):
+        mock_cls.return_value = MagicMock()
+        settings = IngestionSettings(tavily_api_key="tvly-test")
+        crawler = TavilyCrawler(settings)
+        raw = [
+            {"url": "https://example.com/awesome-page", "raw_content": "Content 1"},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs[0].metadata["source_url"] == "https://example.com/awesome-page"
+        assert docs[0].metadata["source_type"] == "documentation"
+        assert docs[0].metadata["doc_title"] == "Awesome Page"
+
+    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
+    def test_to_documents_title_from_html(self, mock_cls):
+        mock_cls.return_value = MagicMock()
+        settings = IngestionSettings(tavily_api_key="tvly-test")
+        crawler = TavilyCrawler(settings)
+        raw = [
+            {"url": "https://example.com/page", "raw_content": "<title>HTML Title</title>\n<p>content</p>"},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs[0].metadata["doc_title"] == "HTML Title"
+
+    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
+    def test_to_documents_title_from_markdown(self, mock_cls):
+        mock_cls.return_value = MagicMock()
+        settings = IngestionSettings(tavily_api_key="tvly-test")
+        crawler = TavilyCrawler(settings)
+        raw = [
+            {"url": "https://example.com/page", "raw_content": "# Markdown Title\n\ncontent"},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs[0].metadata["doc_title"] == "Markdown Title"
 
     @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
     def test_to_documents_empty_results(self, mock_tavily_cls):
@@ -76,7 +84,16 @@ class TestRecursiveCrawler:
         ]
         docs = crawler.to_documents(raw)
         assert len(docs) == 2
-        assert docs[0].metadata["source"] == "https://example.com/page1"
+
+    def test_to_documents_metadata(self):
+        crawler = RecursiveCrawler()
+        raw = [
+            {"url": "https://example.com/my-great-doc", "raw_content": "Content 1"},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs[0].metadata["source_url"] == "https://example.com/my-great-doc"
+        assert docs[0].metadata["source_type"] == "documentation"
+        assert docs[0].metadata["doc_title"] == "My Great Doc"
 
     def test_to_documents_skips_empty_content(self):
         crawler = RecursiveCrawler()
@@ -96,6 +113,16 @@ class TestLocalFileCrawler:
         docs = crawler.to_documents(raw)
         assert len(docs) == 1
         assert "README" in docs[0].page_content
+
+    def test_to_documents_metadata(self):
+        crawler = LocalFileCrawler()
+        raw = [
+            {"url": "/docs/my_awesome_doc.md", "raw_content": "# My Awesome Doc\n\ncontent"},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs[0].metadata["source_url"] == "/docs/my_awesome_doc.md"
+        assert docs[0].metadata["source_type"] == "local_file"
+        assert docs[0].metadata["doc_title"] == "My Awesome Doc"
 
     def test_to_documents_skips_empty(self):
         crawler = LocalFileCrawler()

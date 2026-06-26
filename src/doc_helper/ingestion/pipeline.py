@@ -1,14 +1,55 @@
 import asyncio
+import hashlib
+from datetime import datetime, timezone
 
 import click
 
 from doc_helper.config.settings import Settings
-from doc_helper.embeddings.factory import create_embeddings, get_embedding_model_name
 from doc_helper.ingestion.crawlers import create_crawler
 from doc_helper.ingestion.splitters.factory import create_text_splitter
 from doc_helper.logger import log_header, log_info, log_success, log_warning
 from doc_helper.stores.base import BaseVectorStore
 from doc_helper.stores.factory import create_vector_store
+
+
+def _compute_content_hash(content: str) -> str:
+    return f"sha256:{hashlib.sha256(content.encode()).hexdigest()}"
+
+
+def _enrich_metadata(documents: list) -> list:
+    now = datetime.now(timezone.utc).isoformat()
+    for doc in documents:
+        doc.metadata["ingested_at"] = now
+        doc.metadata["content_hash"] = _compute_content_hash(doc.page_content)
+        doc.metadata["word_count"] = len(doc.page_content.split())
+    return documents
+
+
+def _filter_duplicates(documents: list, store: BaseVectorStore) -> tuple[list, int]:
+    existing_hashes: set[str] = set()
+    try:
+        from langchain_core.documents import Document
+
+        existing = store.as_retriever().invoke("__dedup_check__")
+        for doc in existing:
+            if hasattr(doc, "metadata"):
+                h = doc.metadata.get("content_hash")
+                if h:
+                    existing_hashes.add(h)
+    except Exception:
+        pass
+
+    unique: list = []
+    skipped = 0
+    for doc in documents:
+        h = doc.metadata.get("content_hash")
+        if h and h in existing_hashes:
+            skipped += 1
+        else:
+            unique.append(doc)
+            existing_hashes.add(h)
+
+    return unique, skipped
 
 
 async def run_ingestion(settings: Settings | None = None) -> None:
@@ -34,19 +75,32 @@ async def run_ingestion(settings: Settings | None = None) -> None:
     split_docs = splitter.split_documents(documents)
     log_success(f"Created {len(split_docs)} chunks from {len(documents)} documents")
 
-    log_header("VECTOR STORAGE PHASE")
-    log_info(f"Adding {len(split_docs)} chunks to vector store")
+    log_header("METADATA ENRICHMENT PHASE")
+    split_docs = _enrich_metadata(split_docs)
+    log_info(f"Enriched {len(split_docs)} chunks with ingested_at, content_hash, word_count")
 
+    log_header("VECTOR STORAGE PHASE")
     store = create_vector_store(settings)
+
     if isinstance(store, BaseVectorStore):
-        store.add_documents(split_docs, batch_size=settings.ingestion.batch_size)
+        unique_docs, skipped = _filter_duplicates(split_docs, store)
+        if skipped > 0:
+            log_warning(f"Deduplication: skipped {skipped} duplicate chunks")
+        if not unique_docs:
+            log_warning("All chunks already exist in store. Nothing to add.")
+            return
+        log_info(f"Adding {len(unique_docs)} chunks to vector store")
+        store.add_documents(unique_docs, batch_size=settings.ingestion.batch_size)
     else:
         store.add_documents(split_docs)
+
+    dedup_count = len(split_docs) - len(unique_docs) if isinstance(store, BaseVectorStore) else 0
 
     log_header("PIPELINE COMPLETE")
     log_success("Documentation ingestion pipeline finished!")
     log_info(f"  Documents extracted: {len(documents)}")
     log_info(f"  Chunks created: {len(split_docs)}")
+    log_info(f"  Duplicates skipped: {dedup_count}")
 
 
 @click.command()

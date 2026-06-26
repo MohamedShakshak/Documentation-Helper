@@ -23,6 +23,12 @@ def create_text_splitter(settings: IngestionSettings | None = None):
 
 
 class MarkdownSplitter:
+    HEADER_TO_FIELD = {
+        "header1": "parent_section",
+        "header2": "section_heading",
+        "header3": "section_heading",
+    }
+
     def __init__(
         self,
         recursive_splitter: RecursiveCharacterTextSplitter | None = None,
@@ -44,18 +50,41 @@ class MarkdownSplitter:
         result: list[Document] = []
         for doc in documents:
             md_docs = self._markdown.split_text(doc.page_content)
+            chunks: list[Document] = []
             for md_doc in md_docs:
-                metadata = {**doc.metadata, **md_doc.metadata}
-                chunks = self._recursive.split_documents(
+                metadata = {**doc.metadata, **self._remap_headers(md_doc.metadata)}
+                split_chunks = self._recursive.split_documents(
                     [Document(page_content=md_doc.page_content, metadata=metadata)]
                 )
-                result.extend(chunks)
+                chunks.extend(split_chunks)
+            total = len(chunks)
+            for i, chunk in enumerate(chunks):
+                chunk.metadata["chunk_index"] = i
+                chunk.metadata["total_chunks"] = total
+            result.extend(chunks)
         return result
 
     def split_text(self, text: str) -> list[Document]:
         md_docs = self._markdown.split_text(text)
-        result: list[Document] = []
+        chunks: list[Document] = []
         for md_doc in md_docs:
-            chunks = self._recursive.split_documents([md_doc])
-            result.extend(chunks)
-        return result
+            metadata = self._remap_headers(md_doc.metadata)
+            split_chunks = self._recursive.split_documents([md_doc])
+            for chunk in split_chunks:
+                chunk.metadata = {**chunk.metadata, **metadata}
+            chunks.extend(split_chunks)
+        total = len(chunks)
+        for i, chunk in enumerate(chunks):
+            chunk.metadata["chunk_index"] = i
+            chunk.metadata["total_chunks"] = total
+        return chunks
+
+    def _remap_headers(self, md_metadata: dict) -> dict:
+        remapped: dict = {}
+        for key, value in md_metadata.items():
+            field = self.HEADER_TO_FIELD.get(key, key)
+            if field in remapped and not remapped[field]:
+                remapped[field] = value
+            elif field not in remapped:
+                remapped[field] = value
+        return remapped

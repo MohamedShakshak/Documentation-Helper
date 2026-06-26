@@ -76,7 +76,7 @@ class TestRetriever:
         doc2.metadata = {"source": "b"}
         mock_retriever.invoke.return_value = [doc1, doc2]
 
-        with patch("doc_helper.retrieval.retriever.Reranker") as mock_reranker_cls:
+        with patch("doc_helper.retrieval.reranker.Reranker") as mock_reranker_cls:
             mock_reranker_instance = MagicMock()
             mock_reranker_cls.return_value = mock_reranker_instance
             mock_reranker_instance.rerank.return_value = [doc2, doc1]

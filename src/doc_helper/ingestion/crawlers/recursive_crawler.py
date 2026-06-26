@@ -1,7 +1,13 @@
 from typing import Any
+from urllib.parse import urlparse
 
 from langchain_core.documents import Document
 
+from doc_helper.ingestion.crawlers.tavily_crawler import (
+    _extract_title_from_html,
+    _extract_title_from_markdown,
+    _extract_title_from_url,
+)
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
 from doc_helper.logger import log_info, log_header
@@ -30,6 +36,20 @@ class RecursiveCrawler(BaseCrawler):
             url = item.get("url", "Unknown")
             content = item.get("raw_content", "")
             if content:
+                doc_title = (
+                    _extract_title_from_html(content)
+                    or _extract_title_from_markdown(content)
+                    or _extract_title_from_url(url)
+                )
                 log_info(f"RecursiveCrawl: Loaded {url}")
-                documents.append(Document(page_content=content, metadata={"source": url}))
+                documents.append(
+                    Document(
+                        page_content=content,
+                        metadata={
+                            "source_url": url,
+                            "source_type": "documentation",
+                            "doc_title": doc_title,
+                        },
+                    )
+                )
         return documents

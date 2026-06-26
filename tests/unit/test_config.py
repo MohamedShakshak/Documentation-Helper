@@ -75,8 +75,8 @@ class TestIngestionSettings:
         assert settings.crawler == "tavily"
         assert settings.crawl_url == "https://python.langchain.com/"
         assert settings.crawl_depth == 2
-        assert settings.chunk_size == 4000
-        assert settings.chunk_overlap == 200
+        assert settings.chunk_size == 800
+        assert settings.chunk_overlap == 100
         assert settings.batch_size == 500
 
 
