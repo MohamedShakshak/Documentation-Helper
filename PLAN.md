@@ -29,6 +29,7 @@ Transform the current single-file RAG prototype into a production-grade, modular
 | 19 | Agent middleware | Guardrails + Summarization + Tool Retry + Model Fallback (adopted from chat-langchain) |
 | 20 | Multi-tool agent | `retrieve_context` (vector store) + `web_search` (Tavily fallback) + `check_links` (URL validation) |
 | 21 | Chunking | Markdown-aware splitting (MarkdownHeaderTextSplitter → RecursiveCharacterTextSplitter), chunk_size=800, overlap=100 |
+| 22 | Document metadata | Layered metadata envelope: source identity, position context, quality signals, deduplication hash |
 
 ### Inspiration: chat-langchain
 
@@ -492,6 +493,10 @@ class BaseCrawler(ABC):
 - `recursive_crawler.py` — Uses LangChain's `RecursiveUrlLoader` (zero API keys needed)
 - `local_file_crawler.py` — Recursively loads `.md`, `.txt`, `.pdf` files from a local directory using `DirectoryLoader`
 
+Each crawler's `to_documents()` sets `source_url` and `source_type` in metadata:
+- Tavily / Recursive → `source_type="documentation"`
+- LocalFile → `source_type="local_file"`
+
 **Splitter factory (`splitters/factory.py`):**
 
 Two-stage chunking strategy selectable via `INGESTION__SPLIT_STRATEGY`:
@@ -501,13 +506,59 @@ Two-stage chunking strategy selectable via `INGESTION__SPLIT_STRATEGY`:
 
 Defaults updated: `chunk_size=800` (was 4000), `chunk_overlap=100` (was 200). Smaller chunks improve retrieval precision.
 
+#### Document Metadata Envelope
+
+Every document indexed in the vector store carries a rich metadata envelope alongside its embedding:
+
+```python
+{
+    # Source identity
+    "source_url": "https://python.langchain.com/docs/...",
+    "source_type": "documentation",      # or "local_file", "web_search"
+    "doc_title": "ChatOpenAI",           # extracted from <title> or first H1
+    "section_heading": "Streaming",      # nearest H2/H3 above this chunk
+    "parent_section": "LLM Providers",   # the H1 context
+
+    # Position context
+    "chunk_index": 3,                   # which chunk within the parent doc
+    "total_chunks": 12,                  # total chunks from this doc
+
+    # Quality signals
+    "ingested_at": "2025-06-27T10:30:00Z",
+    "content_hash": "sha256:abc123...",  # for deduplication on re-ingestion
+    "word_count": 312,
+}
+```
+
+**Where each field is set:**
+
+| Field | Set By | How |
+|-------|--------|-----|
+| `source_url` | Crawler (`to_documents()`) | URL or file path |
+| `source_type` | Crawler (`to_documents()`) | `"documentation"` / `"local_file"` |
+| `doc_title` | Crawler (`to_documents()`) | Extracted from HTML `<title>` tag or filename |
+| `section_heading` | `MarkdownSplitter` | Renamed from `header2` / `header3` |
+| `parent_section` | `MarkdownSplitter` | Renamed from `header1` |
+| `chunk_index` | `MarkdownSplitter` | Sequential counter per parent document |
+| `total_chunks` | `MarkdownSplitter` | Count of chunks from same parent doc |
+| `ingested_at` | Pipeline (`pipeline.py`) | `datetime.now(timezone.utc).isoformat()` |
+| `content_hash` | Pipeline (`pipeline.py`) | `hashlib.sha256(content.encode()).hexdigest()` |
+| `word_count` | Pipeline (`pipeline.py`) | `len(content.split())` |
+
+**Deduplication:** Before adding documents, compute `content_hash` for each chunk. If a chunk with the same hash already exists in the vector store (checked via metadata filter), skip it. Prevents duplicate content from re-ingestion runs.
+
+**Skipped for now (future enhancement):**
+- `prev_chunk_id` / `next_chunk_id` — neighbor fetching adds retrieval complexity, can be added later
+- `keywords` — extracted via `rake-nltk`, nice but not critical, adds a dependency
+
 **Pipeline (`pipeline.py`):**
 
-Orchestrates: `crawl → split → embed → store`
+Orchestrates: `crawl → split → enrich metadata → deduplicate → embed → store`
 
 - Called from CLI (`python -m doc_helper.ingest`) or API (`POST /api/ingest`)
 - For API path: creates a task in SQLite `tasks` table, runs async, updates progress
-- Supports resumable ingestion (skip already-indexed URLs by checking metadata)
+- Enriches metadata: `ingested_at`, `content_hash`, `word_count` (pipeline-level)
+- Deduplication: skips chunks whose `content_hash` already exists in the store
 
 **CLI interface:**
 
@@ -517,8 +568,8 @@ python -m doc_helper.ingest \
   --depth 2 \
   --crawler tavily \
   --store chroma \
-  --chunk-size 4000 \
-  --chunk-overlap 200
+  --chunk-size 800 \
+  --chunk-overlap 100
 ```
 
 ### 8. Database (`src/doc_helper/db/`)
@@ -839,32 +890,60 @@ volumes:
     - Each crawler returns `list[Document]`
     - Pipeline correctly chains crawl → split → store
 
-### Phase 4.5: Multi-Tool Agent + Middleware (Days 12-13)
+### Phase 4.5: Document Metadata Enrichment + Multi-Tool Agent + Middleware (Days 12-14)
 
-**Goal:** Add tools (web_search, check_links) and middleware (guardrails, summarization, retry, fallback) to the RAG agent. Adopted from chat-langchain architecture.
+**Goal:** Enrich document metadata with layered envelope, add tools (web_search, check_links) and middleware (guardrails, summarization, retry, fallback) to the RAG agent. Adopted from chat-langchain architecture.
 
 **Tasks:**
-1. Create `agents/tools/` directory with `__init__.py`
-2. Implement `agents/tools/retrieve_context.py` — extract from current `rag_agent.py`, standalone tool
-3. Implement `agents/tools/web_search.py` — Tavily Search API fallback tool (`AGENT__WEB_SEARCH_ENABLED`)
-4. Implement `agents/tools/check_links.py` — async URL validation with soft-404 detection (`AGENT__LINK_CHECK_ENABLED`)
-5. Create `agents/middleware/` directory with `__init__.py`
-6. Implement `agents/middleware/guardrails.py` — LLM-based query classification (ALLOWED/BLOCKED)
-7. Implement `agents/middleware/summarization.py` — compress conversations exceeding token threshold
-8. Implement `agents/middleware/tool_retry.py` — retry failed tool calls with backoff
-9. Implement `agents/middleware/model_fallback.py` — fall back from OpenRouter to Ollama on failure
-10. Add `AgentSettings` to `config/settings.py` — all middleware config options
-11. Update `.env.example` with `AGENT__*` variables
-12. Refactor `agents/rag_agent.py` — wire tools + middleware into `create_agent(middleware=[...])`
-13. Write unit tests for:
+
+#### Part A: Document Metadata Enrichment (Ingestion-side)
+1. Update crawlers to set `source_url` and `source_type` in `to_documents()`:
+   - Tavily/Recursive → `source_type="documentation"`
+   - LocalFile → `source_type="local_file"`
+2. Add `doc_title` extraction per crawler:
+   - Tavily: from result metadata or URL slug
+   - Recursive: from HTML `<title>` tag
+   - LocalFile: from filename or first H1
+3. Update `MarkdownSplitter` to rename header metadata:
+   - `header1` → `parent_section`
+   - `header2`/`header3` → `section_heading`
+4. Update `MarkdownSplitter` to assign `chunk_index` and `total_chunks` per parent document
+5. Update `pipeline.py` to enrich metadata:
+   - `ingested_at` — `datetime.now(timezone.utc).isoformat()`
+   - `content_hash` — `hashlib.sha256(content.encode()).hexdigest()`
+   - `word_count` — `len(content.split())`
+6. Implement deduplication in `pipeline.py`:
+   - Before adding, check if `content_hash` exists in store metadata
+   - Skip existing chunks, log how many were skipped
+7. Write unit tests for:
+   - Metadata enrichment (all fields set correctly)
+   - Deduplication skips duplicate chunks
+   - Metadata preserved through splitter
+
+#### Part B: Multi-Tool Agent (Query-side)
+8. Create `agents/tools/` directory with `__init__.py`
+9. Implement `agents/tools/retrieve_context.py` — extract from current `rag_agent.py`, standalone tool
+10. Implement `agents/tools/web_search.py` — Tavily Search API fallback tool (`AGENT__WEB_SEARCH_ENABLED`)
+11. Implement `agents/tools/check_links.py` — async URL validation with soft-404 detection (`AGENT__LINK_CHECK_ENABLED`)
+
+#### Part C: Agent Middleware (Query-side)
+12. Create `agents/middleware/` directory with `__init__.py`
+13. Implement `agents/middleware/guardrails.py` — LLM-based query classification (ALLOWED/BLOCKED)
+14. Implement `agents/middleware/summarization.py` — compress conversations exceeding token threshold
+15. Implement `agents/middleware/tool_retry.py` — retry failed tool calls with backoff
+16. Implement `agents/middleware/model_fallback.py` — fall back from OpenRouter to Ollama on failure
+17. Add `AgentSettings` to `config/settings.py` — all middleware config options
+18. Update `.env.example` with `AGENT__*` variables
+19. Refactor `agents/rag_agent.py` — wire tools + middleware into `create_agent(middleware=[...])`
+20. Write unit tests for:
     - Each tool (retrieve_context, web_search, check_links)
     - Guardrails classification (allowed/blocked queries)
     - Summarization triggers at token threshold
     - Tool retry with backoff
     - Model fallback chain
-14. Update `pyproject.toml` dependencies if needed
+21. Update `pyproject.toml` dependencies if needed
 
-### Phase 5: FastAPI + Streamlit (Days 13-15)
+### Phase 5: FastAPI + Streamlit (Days 15-17)
 
 **Goal:** Build the API server and refactor Streamlit to call it.
 
@@ -927,13 +1006,15 @@ volumes:
 - Retriever: different search types return documents
 - Reranker: reorders results when enabled, passes through when disabled
 - Splitters: markdown strategy respects headers, recursive fallback works
+- Metadata enrichment: all metadata fields set correctly, dedup skips duplicate chunks
 - Tools: retrieve_context, web_search, check_links each produce correct output
 - Middleware: guardrails classification, summarization threshold, tool retry, model fallback
 - Observability factory: NoOp when disabled, correct tracer when enabled
 
 ### Integration Tests
 - RAG agent: end-to-end query with mock LLM, real Chroma instance, verify tool calls
-- Ingestion pipeline: crawl mock data → split (markdown) → store → retrieve, verify round-trip
+- Ingestion pipeline: crawl mock data → split (markdown) → enrich metadata → store → retrieve, verify round-trip
+- Deduplication: re-ingest same content, verify no duplicates in store
 - Agent middleware: guardrails blocks off-topic, summarization compresses long history
 - FastAPI endpoints: health check, chat stream, ingestion task lifecycle
 
