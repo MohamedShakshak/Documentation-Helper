@@ -12,7 +12,7 @@ Transform the current single-file RAG prototype into a production-grade, modular
 | 2 | Embedding models | BGE-small + BGE-base with dimension validation in metadata |
 | 3 | LLM providers | Ollama (default, zero keys) + OpenRouter (cloud, production) |
 | 4 | Retrieval | Similarity / MMR / score-threshold + optional FlashRank reranker |
-| 5 | Agent pattern | Tool-calling RAG agent with conversation memory |
+| 5 | Agent pattern | Tool-calling RAG agent with conversation memory + middleware |
 | 6 | Memory storage | SQLite for conversation persistence |
 | 7 | Streaming | SSE with typed events (thought, tool_call, tool_result, answer, done) |
 | 8 | Ingestion | CLI + API, SQLite task queue for async tracking |
@@ -26,6 +26,29 @@ Transform the current single-file RAG prototype into a production-grade, modular
 | 16 | Testing | Unit + Integration + RAGAS eval |
 | 17 | CI/CD | Skipped for now |
 | 18 | Error handling | Skipped for now |
+| 19 | Agent middleware | Guardrails + Summarization + Tool Retry + Model Fallback (adopted from chat-langchain) |
+| 20 | Multi-tool agent | `retrieve_context` (vector store) + `web_search` (Tavily fallback) + `check_links` (URL validation) |
+| 21 | Chunking | Markdown-aware splitting (MarkdownHeaderTextSplitter → RecursiveCharacterTextSplitter), chunk_size=800, overlap=100 |
+
+### Inspiration: chat-langchain
+
+Architecture patterns adopted from [langchain-ai/chat-langchain](https://github.com/langchain-ai/chat-langchain):
+
+| Their Pattern | Our Adaptation |
+|---------------|----------------|
+| Middleware (guardrails, summarization, retry, fallback) | ✅ Add `middleware=[...]` to our `create_agent()` — same LangChain API |
+| Multi-tool agent (docs search, support KB, link check) | ✅ 3 tools: `retrieve_context`, `web_search`, `check_links` |
+| Model fallback chain (primary → fallback models) | ✅ OpenRouter → Ollama fallback via middleware |
+| Prompt management (LangSmith Hub + local) | ✅ Local prompts now, LangFuse prompt management in Phase 6 |
+
+**What we do NOT adopt from chat-langchain:**
+
+| Their Pattern | Why We Skip |
+|---------------|------------|
+| Mintlify/Pylon API tools | We own our vector store — no external API needed |
+| Redis caching with fuzzy matching | ChromaDB handles retrieval caching; overkill for this project |
+| Next.js frontend | We keep Streamlit (agreed decision) |
+| Raw LangGraph state machine | `create_agent()` already uses LangGraph internally; no benefit to hand-building graphs |
 
 ## Target Structure
 
@@ -60,7 +83,19 @@ documentation-helper/
 │       │   └── reranker.py              # Optional FlashRank reranking
 │       ├── agents/
 │       │   ├── __init__.py
-│       │   └── rag_agent.py             # Tool-calling agent with memory + tools
+│       │   ├── rag_agent.py             # Tool-calling agent with memory + middleware
+│       │   ├── events.py                # SSE event schema
+│       │   ├── tools/
+│       │   │   ├── __init__.py
+│       │   │   ├── retrieve_context.py  # RAG tool (our vector store)
+│       │   │   ├── web_search.py        # Tavily web search fallback
+│       │   │   └── check_links.py       # URL validation tool
+│       │   └── middleware/
+│       │       ├── __init__.py
+│       │       ├── guardrails.py        # Block off-topic queries
+│       │       ├── summarization.py     # Compress long conversations
+│       │       ├── tool_retry.py        # Retry failed tool calls
+│       │       └── model_fallback.py    # Fallback LLM on failure
 │       ├── ingestion/
 │       │   ├── __init__.py
 │       │   ├── crawlers/
@@ -71,7 +106,7 @@ documentation-helper/
 │       │   │   └── local_file_crawler.py
 │       │   ├── splitters/
 │       │   │   ├── __init__.py
-│       │   │   └── factory.py           # Configurable chunk size/overlap
+│       │   │   └── factory.py           # Markdown + Recursive, chunk_size=800
 │       │   └── pipeline.py              # Orchestrate crawl + split + embed + store
 │       ├── evaluation/
 │       │   ├── __init__.py
@@ -103,7 +138,10 @@ documentation-helper/
 │   │   ├── test_llm_factory.py
 │   │   ├── test_stores.py
 │   │   ├── test_retriever.py
-│   │   └── test_reranker.py
+│   │   ├── test_reranker.py
+│   │   ├── test_tools.py
+│   │   ├── test_middleware.py
+│   │   └── test_splitters.py
 │   └── integration/
 │       ├── test_rag_agent.py
 │       └── test_ingestion_pipeline.py
@@ -152,9 +190,22 @@ class IngestionSettings(BaseSettings):
     crawl_url: str = "https://python.langchain.com/"
     crawl_depth: int = 2
     local_docs_dir: str = "./docs"
-    chunk_size: int = 4000
-    chunk_overlap: int = 200
+    chunk_size: int = 800
+    chunk_overlap: int = 100
     batch_size: int = 500
+
+class AgentSettings(BaseSettings):
+    guardrails_enabled: bool = True
+    guardrails_model: str = "qwen3.5:9b"
+    summarization_enabled: bool = True
+    summarization_token_threshold: int = 8000
+    summarization_keep_tokens: int = 2000
+    tool_retry_max_attempts: int = 3
+    model_fallback_enabled: bool = True
+    model_fallback_provider: str = "ollama"
+    model_fallback_model: str = "qwen3.5:9b"
+    web_search_enabled: bool = False
+    link_check_enabled: bool = True
 
 class ObservabilitySettings(BaseSettings):
     enabled: bool = False
@@ -173,6 +224,7 @@ class Settings(BaseSettings):
     vector_store: VectorStoreSettings = VectorStoreSettings()
     retrieval: RetrievalSettings = RetrievalSettings()
     ingestion: IngestionSettings = IngestionSettings()
+    agent: AgentSettings = AgentSettings()
     observability: ObservabilitySettings = ObservabilitySettings()
     database: DatabaseSettings = DatabaseSettings()
 
@@ -212,9 +264,22 @@ INGESTION__TAVILY_API_KEY=
 INGESTION__CRAWL_URL=https://python.langchain.com/
 INGESTION__CRAWL_DEPTH=2
 INGESTION__LOCAL_DOCS_DIR=./docs
-INGESTION__CHUNK_SIZE=4000
-INGESTION__CHUNK_OVERLAP=200
+INGESTION__CHUNK_SIZE=800
+INGESTION__CHUNK_OVERLAP=100
 INGESTION__BATCH_SIZE=500
+
+# Agent Configuration
+AGENT__GUARDRAILS_ENABLED=true
+AGENT__GUARDRAILS_MODEL=qwen3.5:9b
+AGENT__SUMMARIZATION_ENABLED=true
+AGENT__SUMMARIZATION_TOKEN_THRESHOLD=8000
+AGENT__SUMMARIZATION_KEEP_TOKENS=2000
+AGENT__TOOL_RETRY_MAX_ATTEMPTS=3
+AGENT__MODEL_FALLBACK_ENABLED=true
+AGENT__MODEL_FALLBACK_PROVIDER=ollama
+AGENT__MODEL_FALLBACK_MODEL=qwen3.5:9b
+AGENT__WEB_SEARCH_ENABLED=false
+AGENT__LINK_CHECK_ENABLED=true
 
 # Observability Configuration
 OBSERVABILITY__ENABLED=false
@@ -347,23 +412,68 @@ class Retriever:
 
 Uses `flashrank` with the `ms-marco-MiniLM-L-12-v2` model. Takes the top-k retrieved documents, re-scores them, and returns the top-k after reranking. Toggled via `RETRIEVAL__RERANKER_ENABLED`.
 
-### 6. Agents (`src/doc_helper/agents/rag_agent.py`)
+**Reranker (`reranker.py`):**
 
-Tool-calling RAG agent with:
+Uses `flashrank` with the `ms-marco-MiniLM-L-12-v2` model. Takes the top-k retrieved documents, re-scores them, and returns the top-k after reranking. Toggled via `RETRIEVAL__RERANKER_ENABLED`.
 
-- **Memory:** SQLite-backed conversation history via LangChain's `SQLChatMessageHistory` or a custom implementation over the `db/conversations.py` module.
-- **Retrieval tool:** Wraps the `Retriever` class as a LangChain `@tool` with `response_format="content_and_artifact"`.
-- **Agent creation:** Uses `create_agent` with system prompt. Agent is instantiated once and reused across requests via dependency injection in FastAPI.
+### 6. Agents (`src/doc_helper/agents/`)
+
+**Multi-tool RAG agent with middleware** — adopted from chat-langchain's architecture.
+
+#### 6a. Tools (`agents/tools/`)
+
+The agent has 3 tools, each in its own file:
+
+| Tool | File | Description |
+|------|------|-------------|
+| `retrieve_context` | `tools/retrieve_context.py` | Searches our vector store (Chroma/Pinecone) for relevant docs. Returns serialized content + raw Document artifacts. This is our primary RAG tool — we own the full retrieval pipeline. |
+| `web_search` | `tools/web_search.py` | Falls back to Tavily Search API when vector store results are insufficient. Agent decides: "I checked docs, didn't find a good answer, let me search the web." Requires `TAVILY_API_KEY`. |
+| `check_links` | `tools/check_links.py` | Validates URLs in retrieved sources before returning them to the user. Asynchronous HTTP HEAD/GET checks with soft-404 detection for docs.langchain.com domains. Caches results in-memory. |
+
+Each tool is a standalone `@tool` function that can be tested independently.
+
+#### 6b. Middleware (`agents/middleware/`)
+
+Middleware intercepts agent execution at specific hooks. Ordered list passed to `create_agent(middleware=[...])`.
+
+| Middleware | File | What It Does |
+|------------|------|-------------|
+| Guardrails | `middleware/guardrails.py` | Uses a small LLM to classify queries as ALLOWED/BLOCKED before agent runs. Blocks off-topic queries (non-LangChain questions). Falls back to allowing on classification failure. |
+| Summarization | `middleware/summarization.py` | When conversation history exceeds a token threshold (configurable, default 8000), compresses older messages into a summary. Prevents context window overflow in long conversations. |
+| Tool Retry | `middleware/tool_retry.py` | Retries failed tool calls up to 3 times with exponential backoff. Handles transient failures (API timeouts, Chroma connection issues). |
+| Model Fallback | `middleware/model_fallback.py` | If primary LLM (OpenRouter) fails, falls back to secondary (Ollama). Uses LangChain's `ModelFallbackMiddleware`. |
+
+**Agent creation:**
+
+```python
+agent = create_agent(
+    model=llm,
+    tools=[retrieve_context, web_search, check_links],
+    system_prompt=system_prompt,
+    middleware=[
+        guardrails_middleware,      # Block off-topic queries
+        summarization_middleware,    # Compress long conversations
+        tool_retry_middleware,      # Retry failed tool calls
+        model_fallback_middleware,   # Fall back to Ollama if OpenRouter fails
+    ],
+)
+```
+
+#### 6c. RAG Agent (`agents/rag_agent.py`)
+
+- **Memory:** SQLite-backed conversation history via `ConversationManager`.
+- **Agent creation:** Uses `create_agent` with system prompt + middleware. Agent is instantiated once and reused via dependency injection.
 - **Streaming:** Uses LangChain's `astream_events` to emit typed SSE events:
 
 ```python
 # SSE event types emitted during streaming
 EventTypes:
   agent_thought   # LLM reasoning tokens
-  tool_call       # Retrieval tool invoked (includes query)
-  tool_result     # Documents retrieved (includes source list)
+  tool_call       # Tool invoked (includes tool name + query)
+  tool_result     # Tool output (includes source list / search results)
   answer          # Final answer tokens
   done            # Stream complete
+  error           # Stream failed
 ```
 
 ### 7. Ingestion (`src/doc_helper/ingestion/`)
@@ -384,7 +494,12 @@ class BaseCrawler(ABC):
 
 **Splitter factory (`splitters/factory.py`):**
 
-Returns a `RecursiveCharacterTextSplitter` configured from `IngestionSettings` (`chunk_size`, `chunk_overlap`). Extensible to support other strategies (Markdown-specific, semantic) in the future.
+Two-stage chunking strategy selectable via `INGESTION__SPLIT_STRATEGY`:
+
+- **`markdown` (default):** First splits by markdown headers (`MarkdownHeaderTextSplitter` — respects `#`, `##`, `###` boundaries), then applies `RecursiveCharacterTextSplitter` on each section. Preserves logical structure. Degrades gracefully to recursive if content isn't markdown.
+- **`recursive`:** Plain `RecursiveCharacterTextSplitter` only.
+
+Defaults updated: `chunk_size=800` (was 4000), `chunk_overlap=100` (was 200). Smaller chunks improve retrieval precision.
 
 **Pipeline (`pipeline.py`):**
 
@@ -686,42 +801,68 @@ volumes:
    - Dimension mismatch detection raises clear error
 8. Refactor `ingestion.py` to use `BaseVectorStore` instead of direct Chroma
 
-### Phase 3: Retrieval & Agent (Days 7-9)
+### Phase 3: Retrieval & Agent (Days 7-9) ✅ Done
 
-**Goal:** Build the configurable retriever, optional reranker, and refactored RAG agent with memory.
-
-**Tasks:**
-1. Implement `retrieval/retriever.py` — configurable search type (similarity/MMR/threshold) with `search_k` and `score_threshold`
-2. Implement `retrieval/reranker.py` — FlashRank cross-encoder reranker, toggled by config
-3. Implement `agents/rag_agent.py`:
-   - Tool-calling agent with `retrieve_context` tool
-   - SQLite-backed conversation memory
-   - Agent instantiated once, reused via dependency injection
-   - Streaming support via `astream_events`
-4. Implement SSE typed event schema (`agent_thought`, `tool_call`, `tool_result`, `answer`, `done`)
-5. Write unit tests for:
-   - Retriever returns documents with different search types
-   - Reranker reorders results (with `RERANKER_ENABLED=true`)
-   - Agent invokes retrieval tool correctly (using `FakeChatModel`)
-6. Write integration test for full agent query (using small test Chroma instance)
-
-### Phase 4: Ingestion Pipeline (Days 10-12)
-
-**Goal:** Build the composable ingestion pipeline with CLI and API support.
+**Goal:** Build the configurable retriever, optional reranker, RAG agent with memory, SSE events, and SQLite database layer.
 
 **Tasks:**
-1. Implement `ingestion/crawlers/base.py` — abstract `BaseCrawler` interface
-2. Implement `ingestion/crawlers/tavily_crawler.py` — extract from current `ingestion.py`
-3. Implement `ingestion/crawlers/recursive_crawler.py` — LangChain `RecursiveUrlLoader`
-4. Implement `ingestion/crawlers/local_file_crawler.py` — LangChain `DirectoryLoader`
-5. Implement `ingestion/splitters/factory.py` — configurable `RecursiveCharacterTextSplitter`
-6. Implement `ingestion/pipeline.py` — orchestrate crawl → split → embed → store
-7. Implement CLI command: `python -m doc_helper.ingest` with Click/argparse arguments
-8. Implement `db/tasks.py` — SQLite task tracking for async ingestion via API
-9. Write unit tests for:
-   - Each crawler returns `list[Document]`
-   - Pipeline correctly chains crawl → split → store
-   - Task tracking records status transitions
+1. ✅ Implement `retrieval/retriever.py` — configurable search type (similarity/MMR/threshold)
+2. ✅ Implement `retrieval/reranker.py` — FlashRank cross-encoder reranker
+3. ✅ Implement `db/connection.py` — SQLite connection + migrations (WAL mode)
+4. ✅ Implement `db/conversations.py` — conversation CRUD + LangChain message adapter
+5. ✅ Implement `db/tasks.py` — ingestion task tracking (pending/running/completed/failed)
+6. ✅ Implement `agents/events.py` — SSE event schema (6 event types)
+7. ✅ Implement `agents/rag_agent.py` — tool-calling agent with memory + streaming + source extraction
+8. ✅ Write unit tests for database, conversations, tasks, events
+9. ✅ Write integration test for RAG agent (mock LLM, message building, memory)
+
+### Phase 4: Ingestion Pipeline + Markdown Chunking (Days 10-12)
+
+**Goal:** Build the composable ingestion pipeline with CLI, markdown-aware chunking, and API support.
+
+**Tasks:**
+1. ✅ Implement `ingestion/crawlers/base.py` — abstract `BaseCrawler` interface
+2. ✅ Implement `ingestion/crawlers/tavily_crawler.py` — extract from current `ingestion.py`
+3. ✅ Implement `ingestion/crawlers/recursive_crawler.py` — LangChain `RecursiveUrlLoader`
+4. ✅ Implement `ingestion/crawlers/local_file_crawler.py` — LangChain `DirectoryLoader`
+5. Update `ingestion/splitters/factory.py` — add `SPLIT_STRATEGY` config (`markdown` | `recursive`):
+   - **`markdown` (default):** `MarkdownHeaderTextSplitter` → `RecursiveCharacterTextSplitter` (two-stage)
+   - **`recursive`:** plain `RecursiveCharacterTextSplitter`
+   - Update defaults: `chunk_size=800`, `chunk_overlap=100`
+6. Update `config/settings.py` — add `split_strategy` to `IngestionSettings`
+7. Update `.env.example` — document `INGESTION__SPLIT_STRATEGY`
+8. ✅ Implement `ingestion/pipeline.py` — orchestrate crawl → split → embed → store
+9. ✅ Implement CLI command: `python -m doc_helper.ingest` with Click arguments
+10. Write unit tests for:
+    - Markdown splitter respects headers
+    - Recursive fallback works when content isn't markdown
+    - Each crawler returns `list[Document]`
+    - Pipeline correctly chains crawl → split → store
+
+### Phase 4.5: Multi-Tool Agent + Middleware (Days 12-13)
+
+**Goal:** Add tools (web_search, check_links) and middleware (guardrails, summarization, retry, fallback) to the RAG agent. Adopted from chat-langchain architecture.
+
+**Tasks:**
+1. Create `agents/tools/` directory with `__init__.py`
+2. Implement `agents/tools/retrieve_context.py` — extract from current `rag_agent.py`, standalone tool
+3. Implement `agents/tools/web_search.py` — Tavily Search API fallback tool (`AGENT__WEB_SEARCH_ENABLED`)
+4. Implement `agents/tools/check_links.py` — async URL validation with soft-404 detection (`AGENT__LINK_CHECK_ENABLED`)
+5. Create `agents/middleware/` directory with `__init__.py`
+6. Implement `agents/middleware/guardrails.py` — LLM-based query classification (ALLOWED/BLOCKED)
+7. Implement `agents/middleware/summarization.py` — compress conversations exceeding token threshold
+8. Implement `agents/middleware/tool_retry.py` — retry failed tool calls with backoff
+9. Implement `agents/middleware/model_fallback.py` — fall back from OpenRouter to Ollama on failure
+10. Add `AgentSettings` to `config/settings.py` — all middleware config options
+11. Update `.env.example` with `AGENT__*` variables
+12. Refactor `agents/rag_agent.py` — wire tools + middleware into `create_agent(middleware=[...])`
+13. Write unit tests for:
+    - Each tool (retrieve_context, web_search, check_links)
+    - Guardrails classification (allowed/blocked queries)
+    - Summarization triggers at token threshold
+    - Tool retry with backoff
+    - Model fallback chain
+14. Update `pyproject.toml` dependencies if needed
 
 ### Phase 5: FastAPI + Streamlit (Days 13-15)
 
@@ -785,11 +926,15 @@ volumes:
 - Store factory: returns correct store type, dimension mismatch detection
 - Retriever: different search types return documents
 - Reranker: reorders results when enabled, passes through when disabled
+- Splitters: markdown strategy respects headers, recursive fallback works
+- Tools: retrieve_context, web_search, check_links each produce correct output
+- Middleware: guardrails classification, summarization threshold, tool retry, model fallback
 - Observability factory: NoOp when disabled, correct tracer when enabled
 
 ### Integration Tests
 - RAG agent: end-to-end query with mock LLM, real Chroma instance, verify tool calls
-- Ingestion pipeline: crawl mock data → split → store → retrieve, verify round-trip
+- Ingestion pipeline: crawl mock data → split (markdown) → store → retrieve, verify round-trip
+- Agent middleware: guardrails blocks off-topic, summarization compresses long history
 - FastAPI endpoints: health check, chat stream, ingestion task lifecycle
 
 ### RAGAS Evaluation
