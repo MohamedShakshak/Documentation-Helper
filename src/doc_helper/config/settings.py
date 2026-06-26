@@ -44,8 +44,9 @@ class IngestionSettings(BaseSettings):
     crawl_url: str = "https://python.langchain.com/"
     crawl_depth: int = 2
     local_docs_dir: str = "./docs"
-    chunk_size: int = 4000
-    chunk_overlap: int = 200
+    split_strategy: Literal["markdown", "recursive"] = "markdown"
+    chunk_size: int = 800
+    chunk_overlap: int = 100
     batch_size: int = 500
 
     model_config = SettingsConfigDict(env_prefix="INGESTION__")
