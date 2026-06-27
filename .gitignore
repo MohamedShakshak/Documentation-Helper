@@ -17,14 +17,18 @@ env/
 .env
 
 # Database
-data/*.db
-data/*.db-journal
+data/
+*.db
+*.db-journal
 
 # ChromaDB
 chroma_db/
 
 # Evaluation results
-evaluation/results/*.json
+evaluation/results/
+
+# Docker
+.docker/
 
 # IDE
 .vscode/
