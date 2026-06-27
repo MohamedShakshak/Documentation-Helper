@@ -21,6 +21,7 @@ from doc_helper.agents.middleware import (
 from doc_helper.agents.tools import create_tools
 from doc_helper.config.settings import AgentSettings, Settings
 from doc_helper.db.conversations import ConversationManager
+from doc_helper.observability.base import BaseTracer, NoOpTracer
 from doc_helper.retrieval.retriever import Retriever
 
 _SYSTEM_PROMPT = (
@@ -47,11 +48,13 @@ class RAGAgent:
         agent_settings: AgentSettings | None = None,
         ingestion_settings: Any | None = None,
         enable_web_search: bool = True,
+        tracer: BaseTracer | None = None,
     ):
         self._llm = llm
         self._retriever = retriever
         self._conversation_manager = conversation_manager
         self._agent_settings = agent_settings or AgentSettings()
+        self._tracer = tracer or NoOpTracer()
 
         self._tools = create_tools(
             retriever=retriever,
@@ -78,6 +81,10 @@ class RAGAgent:
         response = self._agent.invoke({"messages": messages})
         answer, context_docs, sources = self._extract_response(response)
 
+        self._tracer.trace_agent_run(query, answer, sources)
+        if context_docs:
+            self._tracer.trace_retrieval(query, context_docs)
+
         if self._conversation_manager and conversation_id:
             self._conversation_manager.add_message(conversation_id, "assistant", answer, sources)
 
@@ -93,13 +100,19 @@ class RAGAgent:
 
         try:
             messages = self._build_messages(query, conversation_id)
-            for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                yield from self._process_stream_event(event)
+            collected_answer: list[str] = []
+            collected_sources: list[str] = []
 
-            sources = []
+            for event in self._agent.astream_events({"messages": messages}, version="v2"):
+                for sse_event in self._process_stream_event(event, collected_answer, collected_sources):
+                    yield sse_event
+
+            answer = "".join(collected_answer).strip()
+            self._tracer.trace_agent_run(query, answer, collected_sources)
+
             if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(conversation_id, "assistant", "", sources)
-            yield DoneEvent(conversation_id=conversation_id or "", sources=sources)
+                self._conversation_manager.add_message(conversation_id, "assistant", answer, collected_sources)
+            yield DoneEvent(conversation_id=conversation_id or "", sources=collected_sources)
 
         except Exception as e:
             yield ErrorEvent(message=str(e))
@@ -116,31 +129,42 @@ class RAGAgent:
 
         try:
             messages = self._build_messages(query, conversation_id)
+            collected_answer: list[str] = []
+            collected_sources: list[str] = []
+
             async for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                for sse_event in self._process_stream_event(event):
+                for sse_event in self._process_stream_event(event, collected_answer, collected_sources):
                     yield sse_event
 
-            sources = []
+            answer = "".join(collected_answer).strip()
+            self._tracer.trace_agent_run(query, answer, collected_sources)
+
             if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(conversation_id, "assistant", "", sources)
-            yield DoneEvent(conversation_id=conversation_id or "", sources=sources)
+                self._conversation_manager.add_message(conversation_id, "assistant", answer, collected_sources)
+            yield DoneEvent(conversation_id=conversation_id or "", sources=collected_sources)
 
         except Exception as e:
             yield ErrorEvent(message=str(e))
 
-    def _process_stream_event(self, event: dict) -> Generator[SSEEvent, None, None]:
+    def _process_stream_event(
+        self, event: dict, answer_acc: list[str] | None = None, sources_acc: list[str] | None = None
+    ) -> Generator[SSEEvent, None, None]:
         kind = event["event"]
         data = event.get("data", {})
 
         if kind == "on_chat_model_stream":
             chunk = data.get("chunk")
             if chunk and hasattr(chunk, "content") and chunk.content:
+                if answer_acc is not None:
+                    answer_acc.append(chunk.content)
                 yield AnswerEvent(content=chunk.content)
 
         elif kind == "on_tool_start":
             tool_input = data.get("input", {})
+            tool_name = event.get("name", "unknown")
+            self._tracer.trace_tool_call(tool_name, tool_input, None)
             yield ToolCallEvent(
-                tool=event.get("name", "unknown"),
+                tool=tool_name,
                 query=str(tool_input.get("query", tool_input.get("urls", ""))),
             )
 
@@ -153,6 +177,8 @@ class RAGAgent:
                     for doc in artifact
                     if hasattr(doc, "metadata")
                 ]
+            if sources_acc is not None:
+                sources_acc.extend(sources)
             yield ToolResultEvent(sources=sources, num_docs=len(sources))
 
     def _build_messages(self, query: str, conversation_id: str | None = None) -> list[dict]:
@@ -191,6 +217,7 @@ def create_rag_agent(
     from doc_helper.config.settings import Settings as _Settings
     from doc_helper.embeddings.factory import create_embeddings
     from doc_helper.llm.factory import create_chat_model
+    from doc_helper.observability.factory import create_tracer as _create_tracer
     from doc_helper.stores.factory import create_vector_store
 
     if settings is None:
@@ -199,6 +226,7 @@ def create_rag_agent(
     llm = create_chat_model(settings.llm)
     store = create_vector_store(settings)
     embeddings = create_embeddings(settings.embedding)
+    tracer = _create_tracer(settings.observability)
 
     from doc_helper.stores.base import BaseVectorStore
 
@@ -216,4 +244,5 @@ def create_rag_agent(
         agent_settings=settings.agent,
         ingestion_settings=settings.ingestion,
         enable_web_search=enable_web_search,
+        tracer=tracer,
     )
