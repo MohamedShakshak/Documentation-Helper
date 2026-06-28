@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timezone
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
@@ -97,7 +96,8 @@ class ConversationManager:
         cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
         for msg in new_messages:
             cursor.execute(
-                "INSERT INTO messages (conversation_id, role, content, sources) VALUES (?, ?, ?, ?)",
+                "INSERT INTO messages "
+                "(conversation_id, role, content, sources) VALUES (?, ?, ?, ?)",
                 (
                     conversation_id,
                     msg["role"],

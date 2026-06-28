@@ -1,10 +1,8 @@
-from functools import lru_cache
 
 from doc_helper.config.settings import Settings, get_settings
 from doc_helper.db.connection import Database
 from doc_helper.db.conversations import ConversationManager
 from doc_helper.db.tasks import TaskManager
-
 
 _settings: Settings | None = None
 _db: Database | None = None

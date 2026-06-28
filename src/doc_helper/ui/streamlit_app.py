@@ -131,7 +131,11 @@ if not st.session_state.messages:
     st.session_state.messages = [
         {
             "role": "assistant",
-            "content": "Ask me anything about LangChain docs. I'll retrieve context, cite sources, and can even search the web.",
+            "content": (
+                "Ask me anything about LangChain docs. "
+                "I'll retrieve context, cite sources, "
+                "and can even search the web."
+            ),
             "sources": [],
         }
     ]

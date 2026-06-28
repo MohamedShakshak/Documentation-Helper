@@ -9,7 +9,6 @@ from doc_helper.agents.events import (
     AnswerEvent,
     DoneEvent,
     ErrorEvent,
-    EventType,
     SSEEvent,
     ToolCallEvent,
     ToolResultEvent,
@@ -90,7 +89,9 @@ class RAGAgent:
 
         return {"answer": answer, "context": context_docs, "sources": sources}
 
-    def stream(self, query: str, conversation_id: str | None = None) -> Generator[SSEEvent, None, None]:
+    def stream(
+        self, query: str, conversation_id: str | None = None
+    ) -> Generator[SSEEvent, None, None]:
         guardrail_error = self._guardrails(query)
         if guardrail_error:
             yield ErrorEvent(message=guardrail_error)
@@ -103,16 +104,23 @@ class RAGAgent:
             collected_answer: list[str] = []
             collected_sources: list[str] = []
 
-            for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                for sse_event in self._process_stream_event(event, collected_answer, collected_sources):
-                    yield sse_event
+            for event in self._agent.astream_events(
+                {"messages": messages}, version="v2"
+            ):
+                yield from self._process_stream_event(
+                    event, collected_answer, collected_sources
+                )
 
             answer = "".join(collected_answer).strip()
             self._tracer.trace_agent_run(query, answer, collected_sources)
 
             if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(conversation_id, "assistant", answer, collected_sources)
-            yield DoneEvent(conversation_id=conversation_id or "", sources=collected_sources)
+                self._conversation_manager.add_message(
+                    conversation_id, "assistant", answer, collected_sources
+                )
+            yield DoneEvent(
+                conversation_id=conversation_id or "", sources=collected_sources
+            )
 
         except Exception as e:
             yield ErrorEvent(message=str(e))
@@ -132,16 +140,24 @@ class RAGAgent:
             collected_answer: list[str] = []
             collected_sources: list[str] = []
 
-            async for event in self._agent.astream_events({"messages": messages}, version="v2"):
-                for sse_event in self._process_stream_event(event, collected_answer, collected_sources):
+            async for event in self._agent.astream_events(
+                {"messages": messages}, version="v2"
+            ):
+                for sse_event in self._process_stream_event(
+                    event, collected_answer, collected_sources
+                ):
                     yield sse_event
 
             answer = "".join(collected_answer).strip()
             self._tracer.trace_agent_run(query, answer, collected_sources)
 
             if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(conversation_id, "assistant", answer, collected_sources)
-            yield DoneEvent(conversation_id=conversation_id or "", sources=collected_sources)
+                self._conversation_manager.add_message(
+                    conversation_id, "assistant", answer, collected_sources
+                )
+            yield DoneEvent(
+                conversation_id=conversation_id or "", sources=collected_sources
+            )
 
         except Exception as e:
             yield ErrorEvent(message=str(e))
@@ -205,7 +221,9 @@ class RAGAgent:
                     for doc in message.artifact:
                         if hasattr(doc, "metadata"):
                             sources.append(
-                                doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
+                                doc.metadata.get(
+                                    "source_url", doc.metadata.get("source", "Unknown")
+                                )
                             )
         return str(answer), context_docs, sources
 
@@ -215,7 +233,6 @@ def create_rag_agent(
     conversation_manager: ConversationManager | None = None,
 ) -> RAGAgent:
     from doc_helper.config.settings import Settings as _Settings
-    from doc_helper.embeddings.factory import create_embeddings
     from doc_helper.llm.factory import create_chat_model
     from doc_helper.observability.factory import create_tracer as _create_tracer
     from doc_helper.stores.factory import create_vector_store
@@ -225,7 +242,6 @@ def create_rag_agent(
 
     llm = create_chat_model(settings.llm)
     store = create_vector_store(settings)
-    embeddings = create_embeddings(settings.embedding)
     tracer = _create_tracer(settings.observability)
 
     from doc_helper.stores.base import BaseVectorStore

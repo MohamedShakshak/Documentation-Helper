@@ -1,16 +1,15 @@
 from typing import Any
-from urllib.parse import urlparse
 
 from langchain_core.documents import Document
 
+from doc_helper.config.settings import IngestionSettings
+from doc_helper.ingestion.crawlers.base import BaseCrawler
 from doc_helper.ingestion.crawlers.tavily_crawler import (
     _extract_title_from_html,
     _extract_title_from_markdown,
     _extract_title_from_url,
 )
-from doc_helper.config.settings import IngestionSettings
-from doc_helper.ingestion.crawlers.base import BaseCrawler
-from doc_helper.logger import log_info, log_header
+from doc_helper.logger import log_header, log_info
 
 
 class RecursiveCrawler(BaseCrawler):
@@ -28,7 +27,10 @@ class RecursiveCrawler(BaseCrawler):
             max_depth=self._settings.crawl_depth,
         )
         docs = loader.load()
-        return [{"url": doc.metadata.get("source", "Unknown"), "raw_content": doc.page_content} for doc in docs]
+        return [
+            {"url": doc.metadata.get("source", "Unknown"), "raw_content": doc.page_content}
+            for doc in docs
+        ]
 
     def to_documents(self, raw_results: list[dict[str, Any]]) -> list[Document]:
         documents = []

@@ -1,6 +1,6 @@
 import asyncio
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import click
 
@@ -17,7 +17,7 @@ def _compute_content_hash(content: str) -> str:
 
 
 def _enrich_metadata(documents: list) -> list:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     for doc in documents:
         doc.metadata["ingested_at"] = now
         doc.metadata["content_hash"] = _compute_content_hash(doc.page_content)
@@ -28,7 +28,6 @@ def _enrich_metadata(documents: list) -> list:
 def _filter_duplicates(documents: list, store: BaseVectorStore) -> tuple[list, int]:
     existing_hashes: set[str] = set()
     try:
-        from langchain_core.documents import Document
 
         existing = store.as_retriever().invoke("__dedup_check__")
         for doc in existing:
@@ -106,8 +105,18 @@ async def run_ingestion(settings: Settings | None = None) -> None:
 @click.command()
 @click.option("--url", default=None, help="URL to crawl (overrides config)")
 @click.option("--depth", default=None, type=int, help="Crawl depth (overrides config)")
-@click.option("--crawler", default=None, type=click.Choice(["tavily", "recursive", "local"]), help="Crawler type")
-@click.option("--store", default=None, type=click.Choice(["chroma", "pinecone"]), help="Vector store type")
+@click.option(
+    "--crawler",
+    default=None,
+    type=click.Choice(["tavily", "recursive", "local"]),
+    help="Crawler type",
+)
+@click.option(
+    "--store",
+    default=None,
+    type=click.Choice(["chroma", "pinecone"]),
+    help="Vector store type",
+)
 def cli(url, depth, crawler, store):
     settings = Settings()
 

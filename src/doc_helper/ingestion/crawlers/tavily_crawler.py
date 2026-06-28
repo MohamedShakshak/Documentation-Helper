@@ -7,7 +7,7 @@ from langchain_tavily import TavilyCrawl
 
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
-from doc_helper.logger import log_info, log_header
+from doc_helper.logger import log_header, log_info
 
 
 def _extract_title_from_url(url: str) -> str:

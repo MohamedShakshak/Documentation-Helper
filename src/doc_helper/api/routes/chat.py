@@ -4,8 +4,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from doc_helper.api.deps import get_agent, get_conversation_manager
 from doc_helper.agents.events import ErrorEvent
+from doc_helper.api.deps import get_agent, get_conversation_manager
 
 router = APIRouter()
 

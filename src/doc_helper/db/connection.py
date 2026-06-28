@@ -3,7 +3,6 @@ from pathlib import Path
 
 from doc_helper.config.settings import DatabaseSettings
 
-
 _MIGRATIONS = [
     """CREATE TABLE IF NOT EXISTS conversations (
         id TEXT PRIMARY KEY,

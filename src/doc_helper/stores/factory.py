@@ -1,4 +1,4 @@
-from doc_helper.config.settings import Settings, VectorStoreSettings
+from doc_helper.config.settings import Settings
 from doc_helper.embeddings.factory import create_embeddings, get_embedding_model_name
 from doc_helper.stores.base import BaseVectorStore
 from doc_helper.stores.chroma_store import ChromaVectorStore

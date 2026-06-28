@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 
 import click
 
@@ -91,16 +92,14 @@ async def run_evaluation(settings: Settings | None = None, sample_size: int | No
 
 
 async def _run_ragas_metrics(results: list[dict], settings: Settings) -> dict:
+    from datasets import Dataset as HFDataset
     from ragas import evaluate
-    from ragas.dataset_schema import SingleTurnSample
     from ragas.metrics import (
         AnswerRelevancy,
         ContextPrecision,
         ContextRecall,
         Faithfulness,
     )
-
-    from datasets import Dataset as HFDataset
 
     questions = [r["question"] for r in results]
     answers = [r["answer"] for r in results]

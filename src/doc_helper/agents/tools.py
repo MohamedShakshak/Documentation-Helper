@@ -1,10 +1,7 @@
 import re
-from typing import Any
-from urllib.parse import urlparse
 
 import httpx
 from langchain.tools import tool
-from langchain_core.documents import Document
 from langchain_tavily import TavilySearch
 
 from doc_helper.config.settings import IngestionSettings

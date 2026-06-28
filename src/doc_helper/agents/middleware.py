@@ -29,7 +29,7 @@ def guardrails_middleware(
         lower = user_query.lower()
         for pattern in blocked_patterns:
             if pattern in lower:
-                return f"Input rejected by guardrails: detected potentially unsafe pattern."
+                return "Input rejected by guardrails: detected potentially unsafe pattern."
 
         return None
 
@@ -95,7 +95,9 @@ def tool_retry_middleware(settings: AgentSettings):
                     return await func(*args, **kwargs)
                 except Exception as e:
                     last_error = e
-                    logger.warning(f"Tool call failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                    logger.warning(
+                        f"Tool call failed (attempt {attempt + 1}/{max_retries + 1}): {e}"
+                    )
             raise last_error
 
         def _sync_wrapper(*args, **kwargs) -> Any:
@@ -105,7 +107,9 @@ def tool_retry_middleware(settings: AgentSettings):
                     return func(*args, **kwargs)
                 except Exception as e:
                     last_error = e
-                    logger.warning(f"Tool call failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                    logger.warning(
+                        f"Tool call failed (attempt {attempt + 1}/{max_retries + 1}): {e}"
+                    )
             raise last_error
 
         import asyncio

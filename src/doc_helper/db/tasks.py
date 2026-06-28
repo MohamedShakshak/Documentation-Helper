@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from doc_helper.db.connection import Database
 
@@ -12,10 +12,11 @@ class TaskManager:
 
     def create_task(self, crawler: str) -> str:
         task_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         cursor = self._db.connection.cursor()
         cursor.execute(
-            "INSERT INTO tasks (id, status, crawler, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO tasks "
+            "(id, status, crawler, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
             (task_id, "pending", crawler, now, now),
         )
         self._db.connection.commit()
@@ -32,7 +33,7 @@ class TaskManager:
     def update_status(self, task_id: str, status: str) -> None:
         if status not in self.VALID_STATUSES:
             raise ValueError(f"Invalid status '{status}'. Must be one of {self.VALID_STATUSES}")
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         cursor = self._db.connection.cursor()
         cursor.execute(
             "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?",
@@ -47,7 +48,7 @@ class TaskManager:
         chunks_created: int | None = None,
         progress: int | None = None,
     ) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         cursor = self._db.connection.cursor()
         updates = ["updated_at = ?"]
         params: list = [now]
@@ -65,7 +66,7 @@ class TaskManager:
         self._db.connection.commit()
 
     def set_error(self, task_id: str, error: str) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         cursor = self._db.connection.cursor()
         cursor.execute(
             "UPDATE tasks SET status = ?, error = ?, updated_at = ? WHERE id = ?",

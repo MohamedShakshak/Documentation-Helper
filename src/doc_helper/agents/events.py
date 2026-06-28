@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     AGENT_THOUGHT = "agent_thought"
     TOOL_CALL = "tool_call"
     TOOL_RESULT = "tool_result"

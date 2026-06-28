@@ -13,15 +13,8 @@ async def lifespan(app: FastAPI):
     log_header("DOCUMENTATION HELPER API")
     db = get_db()
     log_info(f"Database connected: {db._url}")
-
-    try:
-        get_agent_ref = app
-    except Exception:
-        pass
-
     log_success("API server ready")
     yield
-
     log_info("Shutting down...")
     from doc_helper.api.deps import reset_caches
 

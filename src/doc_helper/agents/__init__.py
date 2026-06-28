@@ -1,4 +1,3 @@
-from doc_helper.agents.rag_agent import RAGAgent, create_rag_agent
 from doc_helper.agents.events import (
     AnswerEvent,
     DoneEvent,
@@ -8,6 +7,7 @@ from doc_helper.agents.events import (
     ToolCallEvent,
     ToolResultEvent,
 )
+from doc_helper.agents.rag_agent import RAGAgent, create_rag_agent
 
 __all__ = [
     "RAGAgent",
