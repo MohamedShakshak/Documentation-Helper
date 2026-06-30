@@ -72,7 +72,7 @@ class TestRetrievalSettings:
 class TestIngestionSettings:
     def test_defaults(self):
         settings = IngestionSettings()
-        assert settings.crawler == "tavily"
+        assert settings.crawler == "recursive"
         assert settings.crawl_url == "https://python.langchain.com/"
         assert settings.crawl_depth == 2
         assert settings.chunk_size == 800
@@ -100,7 +100,7 @@ class TestSettings:
         assert settings.embedding.model == "bge-small"
         assert settings.vector_store.provider == "chroma"
         assert settings.retrieval.search_type == "similarity"
-        assert settings.ingestion.crawler == "tavily"
+        assert settings.ingestion.crawler == "recursive"
         assert settings.observability.enabled is False
         assert settings.database.url == "sqlite:///./data/doc_helper.db"
         assert settings.agent.max_tool_retries == 2
