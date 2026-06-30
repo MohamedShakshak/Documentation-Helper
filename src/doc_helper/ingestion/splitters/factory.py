@@ -26,7 +26,8 @@ class MarkdownSplitter:
     HEADER_TO_FIELD = {
         "header1": "parent_section",
         "header2": "section_heading",
-        "header3": "section_heading",
+        "header3": "subsection",
+        "header4": "detail",
     }
 
     def __init__(
@@ -43,6 +44,7 @@ class MarkdownSplitter:
                 ("#", "header1"),
                 ("##", "header2"),
                 ("###", "header3"),
+                ("####", "header4"),
             ],
         )
 

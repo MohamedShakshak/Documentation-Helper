@@ -1,15 +1,25 @@
 from typing import Any
 
+import html2text
 from langchain_core.documents import Document
 
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
 from doc_helper.ingestion.crawlers.tavily_crawler import (
-    _extract_title_from_html,
     _extract_title_from_markdown,
     _extract_title_from_url,
 )
 from doc_helper.logger import log_header, log_info
+
+
+def _html_to_markdown(html: str) -> str:
+    converter = html2text.HTML2Text()
+    converter.body_width = 0
+    converter.ignore_links = False
+    converter.ignore_images = True
+    converter.ignore_tables = False
+    converter.protect_links = True
+    return converter.handle(html)
 
 
 class RecursiveCrawler(BaseCrawler):
@@ -25,6 +35,7 @@ class RecursiveCrawler(BaseCrawler):
         loader = RecursiveUrlLoader(
             url=self._settings.crawl_url,
             max_depth=self._settings.crawl_depth,
+            extractor=_html_to_markdown,
         )
         docs = loader.load()
         return [
@@ -39,8 +50,7 @@ class RecursiveCrawler(BaseCrawler):
             content = item.get("raw_content", "")
             if content:
                 doc_title = (
-                    _extract_title_from_html(content)
-                    or _extract_title_from_markdown(content)
+                    _extract_title_from_markdown(content)
                     or _extract_title_from_url(url)
                 )
                 log_info(f"RecursiveCrawl: Loaded {url}")

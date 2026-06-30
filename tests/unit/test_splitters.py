@@ -48,6 +48,7 @@ Run `pip install langchain` to install.
         assert len(docs) >= 2
         assert any(d.metadata.get("parent_section") == "Introduction" for d in docs)
         assert any(d.metadata.get("section_heading") == "Getting Started" for d in docs)
+        assert any(d.metadata.get("subsection") == "Installation" for d in docs)
 
     def test_split_preserves_source_metadata(self):
         splitter = MarkdownSplitter()
