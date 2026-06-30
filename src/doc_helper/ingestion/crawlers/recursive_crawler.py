@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 import html2text
@@ -5,11 +6,8 @@ from langchain_core.documents import Document
 
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
-from doc_helper.ingestion.crawlers.tavily_crawler import (
-    _extract_title_from_markdown,
-    _extract_title_from_url,
-)
 from doc_helper.logger import log_header, log_info
+from doc_helper.utils import extract_title_from_markdown, extract_title_from_url
 
 
 def _html_to_markdown(html: str) -> str:
@@ -37,7 +35,8 @@ class RecursiveCrawler(BaseCrawler):
             max_depth=self._settings.crawl_depth,
             extractor=_html_to_markdown,
         )
-        docs = loader.load()
+        loop = asyncio.get_event_loop()
+        docs = await loop.run_in_executor(None, loader.load)
         return [
             {"url": doc.metadata.get("source", "Unknown"), "raw_content": doc.page_content}
             for doc in docs
@@ -48,10 +47,10 @@ class RecursiveCrawler(BaseCrawler):
         for item in raw_results:
             url = item.get("url", "Unknown")
             content = item.get("raw_content", "")
-            if content:
+            if content and len(content.strip()) > 100:
                 doc_title = (
-                    _extract_title_from_markdown(content)
-                    or _extract_title_from_url(url)
+                    extract_title_from_markdown(content)
+                    or extract_title_from_url(url)
                 )
                 log_info(f"RecursiveCrawl: Loaded {url}")
                 documents.append(

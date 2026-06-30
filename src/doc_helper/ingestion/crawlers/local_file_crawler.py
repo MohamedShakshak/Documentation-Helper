@@ -5,8 +5,8 @@ from langchain_core.documents import Document
 
 from doc_helper.config.settings import IngestionSettings
 from doc_helper.ingestion.crawlers.base import BaseCrawler
-from doc_helper.ingestion.crawlers.tavily_crawler import _extract_title_from_markdown
 from doc_helper.logger import log_header, log_info
+from doc_helper.utils import extract_title_from_markdown
 
 
 class LocalFileCrawler(BaseCrawler):
@@ -42,7 +42,7 @@ class LocalFileCrawler(BaseCrawler):
             content = item.get("raw_content", "")
             if content:
                 doc_title = (
-                    _extract_title_from_markdown(content)
+                    extract_title_from_markdown(content)
                     or Path(url).stem.replace("_", " ").title()
                 )
                 log_info(f"LocalFile: Loaded {url}")

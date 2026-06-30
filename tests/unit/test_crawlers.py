@@ -31,9 +31,7 @@ class TestTavilyCrawler:
         assert len(docs) == 2
         assert docs[0].page_content == "Content 1"
 
-    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
-    def test_to_documents_metadata(self, mock_cls):
-        mock_cls.return_value = MagicMock()
+    def test_to_documents_metadata(self):
         settings = IngestionSettings(tavily_api_key="tvly-test")
         crawler = TavilyCrawler(settings)
         raw = [
@@ -44,9 +42,7 @@ class TestTavilyCrawler:
         assert docs[0].metadata["source_type"] == "documentation"
         assert docs[0].metadata["doc_title"] == "Awesome Page"
 
-    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
-    def test_to_documents_title_from_html(self, mock_cls):
-        mock_cls.return_value = MagicMock()
+    def test_to_documents_title_from_html(self):
         settings = IngestionSettings(tavily_api_key="tvly-test")
         crawler = TavilyCrawler(settings)
         raw = [
@@ -55,9 +51,7 @@ class TestTavilyCrawler:
         docs = crawler.to_documents(raw)
         assert docs[0].metadata["doc_title"] == "HTML Title"
 
-    @patch("doc_helper.ingestion.crawlers.tavily_crawler.TavilyCrawl")
-    def test_to_documents_title_from_markdown(self, mock_cls):
-        mock_cls.return_value = MagicMock()
+    def test_to_documents_title_from_markdown(self):
         settings = IngestionSettings(tavily_api_key="tvly-test")
         crawler = TavilyCrawler(settings)
         raw = [
@@ -76,11 +70,13 @@ class TestTavilyCrawler:
 
 
 class TestRecursiveCrawler:
+    LONG_CONTENT = "This is a long enough content that passes the minimum length check. " * 5
+
     def test_to_documents(self):
         crawler = RecursiveCrawler()
         raw = [
-            {"url": "https://example.com/page1", "raw_content": "Content 1"},
-            {"url": "https://example.com/page2", "raw_content": "Content 2"},
+            {"url": "https://example.com/page1", "raw_content": self.LONG_CONTENT},
+            {"url": "https://example.com/page2", "raw_content": self.LONG_CONTENT},
         ]
         docs = crawler.to_documents(raw)
         assert len(docs) == 2
@@ -88,7 +84,7 @@ class TestRecursiveCrawler:
     def test_to_documents_metadata(self):
         crawler = RecursiveCrawler()
         raw = [
-            {"url": "https://example.com/my-great-doc", "raw_content": "Content 1"},
+            {"url": "https://example.com/my-great-doc", "raw_content": self.LONG_CONTENT},
         ]
         docs = crawler.to_documents(raw)
         assert docs[0].metadata["source_url"] == "https://example.com/my-great-doc"
@@ -99,6 +95,14 @@ class TestRecursiveCrawler:
         crawler = RecursiveCrawler()
         raw = [
             {"url": "https://example.com/empty", "raw_content": ""},
+        ]
+        docs = crawler.to_documents(raw)
+        assert docs == []
+
+    def test_to_documents_skips_short_content(self):
+        crawler = RecursiveCrawler()
+        raw = [
+            {"url": "https://example.com/short", "raw_content": "\n\n\n"},
         ]
         docs = crawler.to_documents(raw)
         assert docs == []
