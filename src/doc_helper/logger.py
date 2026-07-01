@@ -34,18 +34,18 @@ def log_info(message: str) -> None:
 
 
 def log_success(message: str) -> None:
-    _logger.info(f"✅ {message}")
+    _logger.info(f"[OK] {message}")
 
 
 def log_error(message: str) -> None:
-    _logger.error(f"❌ {message}")
+    _logger.error(f"[ERR] {message}")
 
 
 def log_warning(message: str) -> None:
-    _logger.warning(f"⚠️  {message}")
+    _logger.warning(f"[WARN] {message}")
 
 
 def log_header(message: str) -> None:
-    _logger.info(f"{'=' * 60}")
-    _logger.info(f"🚀 {message}")
-    _logger.info(f"{'=' * 60}")
+    _logger.info("=" * 60)
+    _logger.info(f"  {message}")
+    _logger.info("=" * 60)
