@@ -201,6 +201,7 @@ def create_rag_agent(
     conversation_manager: ConversationManager | None = None,
 ) -> RAGAgent:
     from doc_helper.config.settings import Settings as _Settings
+    from doc_helper.config.settings import LLMSettings as _LLMSettings
     from doc_helper.llm.factory import create_chat_model
     from doc_helper.observability.factory import create_tracer as _create_tracer
     from doc_helper.stores.factory import create_vector_store
@@ -208,7 +209,7 @@ def create_rag_agent(
     if settings is None:
         settings = _Settings()
 
-    llm = create_chat_model(settings.llm)
+    primary = create_chat_model(settings.llm)
     store = create_vector_store(settings)
     tracer = _create_tracer(settings.observability)
 
@@ -216,6 +217,19 @@ def create_rag_agent(
 
     if isinstance(store, BaseVectorStore):
         store.validate_embedding_model(settings.embedding.model)
+
+    agent_cfg = settings.agent
+    if agent_cfg.model_fallback_enabled and agent_cfg.fallback_model:
+        fallback = create_chat_model(
+            _LLMSettings(
+                provider="ollama",
+                model=agent_cfg.fallback_model,
+                temperature=settings.llm.temperature,
+            )
+        )
+        llm = primary.with_fallback(fallback)
+    else:
+        llm = primary
 
     retriever = Retriever(store, settings.retrieval)
 
