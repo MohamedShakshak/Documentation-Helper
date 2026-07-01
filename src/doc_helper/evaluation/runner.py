@@ -170,6 +170,14 @@ def _get_judge_llm(settings: Settings):
             api_key=api_key,
             temperature=0,
         )
+    elif provider == "gemini" and api_key:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        judge = ChatGoogleGenerativeAI(
+            model=model,
+            google_api_key=api_key,
+            temperature=0,
+        )
     else:
         from langchain_ollama import ChatOllama
 

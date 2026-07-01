@@ -4,10 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class LLMSettings(BaseSettings):
-    provider: Literal["ollama", "openrouter"] = "ollama"
+    provider: Literal["ollama", "openrouter", "gemini"] = "ollama"
     model: str = "qwen3.5:9b"
     ollama_base_url: str = "http://localhost:11434"
     openrouter_api_key: str | None = None
+    gemini_api_key: str | None = None
     temperature: float = 0.0
 
     model_config = SettingsConfigDict(env_prefix="LLM__")
@@ -61,6 +62,7 @@ class ObservabilitySettings(BaseSettings):
     langfuse_secret_key: str | None = None
     langfuse_host: str = "http://localhost:3000"
     langsmith_api_key: str | None = None
+    langsmith_project: str = "documentation-helper"
 
     model_config = SettingsConfigDict(env_prefix="OBSERVABILITY__")
 
@@ -72,9 +74,10 @@ class DatabaseSettings(BaseSettings):
 
 
 class JudgeLLMSettings(BaseSettings):
-    provider: Literal["ollama", "openrouter"] | None = None
+    provider: Literal["ollama", "openrouter", "gemini"] | None = None
     model: str | None = None
     openrouter_api_key: str | None = None
+    gemini_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="JUDGE_LLM__")
 

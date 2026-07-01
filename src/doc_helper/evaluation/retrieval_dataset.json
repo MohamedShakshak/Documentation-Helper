@@ -1,0 +1,196 @@
+[
+  {
+    "question": "What is LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How do I install LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "What is LCEL?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How do I create a custom tool in LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/tools"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "What is the difference between Runnable and Chain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How does streaming work in LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How do I use ChatPromptTemplate?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How do I configure an Ollama model in LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/integrations/providers/overview"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "What is the purpose of output parsers?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/structured-output",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "What text splitters are available in LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "simple"
+  },
+  {
+    "question": "How do I implement RAG with LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How does MMR (Maximum Marginal Relevance) retrieval work?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "What is an agent in LangChain?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How does create_agent work?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How do I add memory to an agent?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langgraph/persistence"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "What is the difference between similarity search and MMR?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How do I use a vector store as a retriever?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "What is the role of a reranker in retrieval?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How does SSE streaming work with LangChain agents?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "How do I use LangChain with OpenRouter?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/integrations/providers/overview"
+    ],
+    "difficulty": "multi_hop"
+  },
+  {
+    "question": "What is the purpose of content_hash in document metadata?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "edge_case"
+  },
+  {
+    "question": "How does guardrails middleware protect the agent?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langchain/middleware/custom"
+    ],
+    "difficulty": "edge_case"
+  },
+  {
+    "question": "What happens when summarization middleware triggers?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langgraph/persistence"
+    ],
+    "difficulty": "edge_case"
+  },
+  {
+    "question": "Can I use check_links to verify documentation URLs?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/tools"
+    ],
+    "difficulty": "edge_case"
+  },
+  {
+    "question": "What metadata fields are set by the ingestion pipeline?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "difficulty": "edge_case"
+  }
+]

@@ -94,7 +94,11 @@ class RAGAgent:
         response = self._agent.invoke({"messages": messages})
         answer, context_docs, sources = self._extract_response(response)
 
-        self._tracer.trace_agent_run(query, answer, sources)
+        used_web_search = any("web_search" in s for s in sources) if sources else False
+        self._tracer.trace_agent_run(
+            query, answer,
+            {"num_sources": len(sources), "used_web_search": used_web_search},
+        )
         if context_docs:
             self._tracer.trace_retrieval(query, context_docs)
 
@@ -127,7 +131,10 @@ class RAGAgent:
                     yield sse_event
 
             answer = "".join(collected_answer).strip()
-            self._tracer.trace_agent_run(query, answer, collected_sources)
+            self._tracer.trace_agent_run(
+                query, answer,
+                {"num_sources": len(collected_sources), "used_web_search": any("web_search" in s for s in collected_sources)},
+            )
 
             self._persist_messages(query, answer, collected_sources, conversation_id)
             yield DoneEvent(

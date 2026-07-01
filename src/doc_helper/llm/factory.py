@@ -30,6 +30,20 @@ def create_chat_model(settings: LLMSettings | None = None) -> BaseChatModel:
             temperature=settings.temperature,
         )
 
+    if settings.provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError(
+                "LLM__GEMINI_API_KEY is required when LLM__PROVIDER=gemini"
+            )
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(
+            model=settings.model,
+            google_api_key=settings.gemini_api_key,
+            temperature=settings.temperature,
+        )
+
     raise ValueError(
-        f"Unknown LLM provider '{settings.provider}'. Available: ollama, openrouter"
+        f"Unknown LLM provider '{settings.provider}'. "
+        "Available: ollama, openrouter, gemini"
     )

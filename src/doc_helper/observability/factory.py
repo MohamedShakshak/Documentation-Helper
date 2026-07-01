@@ -34,6 +34,6 @@ def create_tracer(settings: ObservabilitySettings | None = None) -> BaseTracer:
             )
         from doc_helper.observability.langsmith_tracer import LangSmithTracer
 
-        return LangSmithTracer(api_key=api_key)
+        return LangSmithTracer(api_key=api_key, project=settings.langsmith_project)
 
     raise ValueError(f"Unknown observability provider: {settings.provider}")
