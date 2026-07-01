@@ -71,6 +71,14 @@ class DatabaseSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DATABASE__")
 
 
+class JudgeLLMSettings(BaseSettings):
+    provider: Literal["ollama", "openrouter"] | None = None
+    model: str | None = None
+    openrouter_api_key: str | None = None
+
+    model_config = SettingsConfigDict(env_prefix="JUDGE_LLM__")
+
+
 class AgentSettings(BaseSettings):
     max_tool_retries: int = 2
     guardrails_enabled: bool = True
@@ -85,6 +93,7 @@ class AgentSettings(BaseSettings):
 
 class Settings(BaseSettings):
     llm: LLMSettings = LLMSettings()
+    judge_llm: JudgeLLMSettings = JudgeLLMSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
     vector_store: VectorStoreSettings = VectorStoreSettings()
     retrieval: RetrievalSettings = RetrievalSettings()

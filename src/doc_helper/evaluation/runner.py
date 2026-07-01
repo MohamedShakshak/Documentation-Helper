@@ -134,20 +134,25 @@ async def _run_ragas_metrics(results: list[dict], settings: Settings) -> dict:
 def _get_judge_llm(settings: Settings):
     from ragas.llms import LangchainLLMWrapper
 
-    if settings.llm.provider == "openrouter" and settings.llm.openrouter_api_key:
+    judge_cfg = settings.judge_llm
+    provider = judge_cfg.provider or settings.llm.provider
+    api_key = judge_cfg.openrouter_api_key or settings.llm.openrouter_api_key
+    model = judge_cfg.model or settings.llm.model
+
+    if provider == "openrouter" and api_key:
         from langchain_openai import ChatOpenAI
 
         judge = ChatOpenAI(
-            model="openai/gpt-4o-mini",
+            model=model,
             base_url="https://openrouter.ai/api/v1",
-            api_key=settings.llm.openrouter_api_key,
+            api_key=api_key,
             temperature=0,
         )
     else:
         from langchain_ollama import ChatOllama
 
         judge = ChatOllama(
-            model=settings.llm.model,
+            model=model,
             base_url=settings.llm.ollama_base_url,
             temperature=0,
         )
