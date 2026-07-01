@@ -20,7 +20,7 @@ class TestCreateTextSplitter:
     def test_defaults_chunk_size_800(self):
         settings = IngestionSettings()
         assert settings.chunk_size == 800
-        assert settings.chunk_overlap == 100
+        assert settings.chunk_overlap == 150
 
     def test_none_defaults_to_markdown(self):
         splitter = create_text_splitter(None)

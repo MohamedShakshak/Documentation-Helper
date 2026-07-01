@@ -73,10 +73,12 @@ class TestIngestionSettings:
     def test_defaults(self):
         settings = IngestionSettings()
         assert settings.crawler == "recursive"
-        assert settings.crawl_url == "https://python.langchain.com/"
+        assert settings.crawl_url == "https://python.langchain.com/docs/"
         assert settings.crawl_depth == 2
+        assert settings.crawl_prevent_outside is True
+        assert settings.crawl_timeout == 10
         assert settings.chunk_size == 800
-        assert settings.chunk_overlap == 100
+        assert settings.chunk_overlap == 150
         assert settings.batch_size == 500
 
 

@@ -41,12 +41,14 @@ class RetrievalSettings(BaseSettings):
 class IngestionSettings(BaseSettings):
     crawler: Literal["tavily", "recursive", "local"] = "recursive"
     tavily_api_key: str | None = None
-    crawl_url: str = "https://python.langchain.com/"
+    crawl_url: str = "https://python.langchain.com/docs/"
     crawl_depth: int = 2
+    crawl_prevent_outside: bool = True
+    crawl_timeout: int = 10
     local_docs_dir: str = "./docs"
     split_strategy: Literal["markdown", "recursive"] = "markdown"
     chunk_size: int = 800
-    chunk_overlap: int = 100
+    chunk_overlap: int = 150
     batch_size: int = 500
 
     model_config = SettingsConfigDict(env_prefix="INGESTION__")

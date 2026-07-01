@@ -34,6 +34,9 @@ class RecursiveCrawler(BaseCrawler):
             url=self._settings.crawl_url,
             max_depth=self._settings.crawl_depth,
             extractor=_html_to_markdown,
+            timeout=self._settings.crawl_timeout,
+            prevent_outside=self._settings.crawl_prevent_outside,
+            check_response_status=True,
         )
         loop = asyncio.get_event_loop()
         docs = await loop.run_in_executor(None, loader.load)
