@@ -81,7 +81,7 @@ with st.sidebar:
             else:
                 st.error("API unreachable")
 
-    st.diver()
+    st.divider()
 
     st.subheader("Conversation")
     if st.button("New conversation"):
@@ -108,10 +108,10 @@ with st.sidebar:
         st.session_state.conversation_id = None
         st.rerun()
 
-    st.diver()
+    st.divider()
 
     st.subheader("Ingestion")
-    crawl_url = st.text_input("URL to crawl", value="https://python.langchain.com/")
+    crawl_url = st.text_input("URL to crawl", value="https://docs.langchain.com/oss/python/langchain/")
     if st.button("Start ingestion"):
         result = api_post("/ingest", {"url": crawl_url})
         if result:

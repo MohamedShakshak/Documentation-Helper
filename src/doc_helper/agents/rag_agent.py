@@ -227,7 +227,7 @@ def create_rag_agent(
                 temperature=settings.llm.temperature,
             )
         )
-        llm = primary.with_fallback(fallback)
+        llm = primary.with_fallbacks([fallback])
     else:
         llm = primary
 
