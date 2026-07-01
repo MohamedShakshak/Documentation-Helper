@@ -32,6 +32,7 @@ dependencies = [
     "ragas>=0.2.0",
     "html2text>=2025.4.15",
     "beautifulsoup4>=4.15.0",
+    "langsmith>=0.9.3",
 ]
 
 [project.optional-dependencies]
