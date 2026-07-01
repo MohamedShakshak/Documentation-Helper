@@ -1,23 +1,21 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - LLM__PROVIDER=${LLM__PROVIDER:-ollama}
-      - LLM__OLLAMA_BASE_URL=${LLM__OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - VECTOR_STORE__PROVIDER=${VECTOR_STORE__PROVIDER:-chroma}
+      - LLM__OLLAMA_BASE_URL=http://host.docker.internal:11434
       - VECTOR_STORE__CHROMA_PERSIST_DIR=/data/chroma_db
       - DATABASE__URL=sqlite:///data/doc_helper.db
-      - OBSERVABILITY__ENABLED=${OBSERVABILITY__ENABLED:-false}
     volumes:
       - doc_helper_data:/data
-    profiles:
-      - dev
-      - full
-      - production
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   streamlit:
     build:
@@ -25,44 +23,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8501:8501"
-    command: ["streamlit", "run", "src/doc_helper/ui/streamlit_app.py"]
     environment:
       - API_BASE_URL=http://api:8000/api
     depends_on:
-      - api
-    profiles:
-      - full
-
-  langfuse:
-    image: langfuse/langfuse:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
-      - NEXTAUTH_SECRET=mysecret
-      - SALT=mysalt
-    depends_on:
-      langfuse-db:
+      api:
         condition: service_healthy
-    profiles:
-      - full
-
-  langfuse-db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: langfuse
-      POSTGRES_PASSWORD: langfuse
-      POSTGRES_DB: langfuse
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U langfuse"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - langfuse_data:/var/lib/postgresql/data
-    profiles:
-      - full
+    command: ["streamlit", "run", "src/doc_helper/ui/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 volumes:
   doc_helper_data:
-  langfuse_data:
