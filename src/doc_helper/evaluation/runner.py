@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from collections import defaultdict
 from pathlib import Path
 
 import click
@@ -11,10 +12,13 @@ from doc_helper.logger import log_header, log_info, log_success, log_warning
 logger = logging.getLogger(__name__)
 
 
-async def run_evaluation(settings: Settings | None = None, sample_size: int | None = None) -> dict:
+async def run_evaluation(
+    settings: Settings | None = None,
+    sample_size: int | None = None,
+    output_path: str = "evaluation/results.json",
+) -> dict:
     if settings is None:
         settings = Settings()
-
 
     log_header("RAGAS EVALUATION")
     log_info("Loading gold dataset...")
@@ -43,12 +47,14 @@ async def run_evaluation(settings: Settings | None = None, sample_size: int | No
             result = agent.run(query=question)
             answer = result.get("answer", "")
             sources = result.get("sources", [])
+            context_docs = result.get("context", [])
             results.append(
                 {
                     "question": question,
                     "expected_answer": expected_answer,
                     "answer": answer,
                     "sources": sources,
+                    "contexts": [doc.page_content for doc in context_docs] or [""],
                     "difficulty": difficulty,
                 }
             )
@@ -60,6 +66,7 @@ async def run_evaluation(settings: Settings | None = None, sample_size: int | No
                     "expected_answer": expected_answer,
                     "answer": f"ERROR: {e}",
                     "sources": [],
+                    "contexts": [""],
                     "difficulty": difficulty,
                 }
             )
@@ -69,17 +76,31 @@ async def run_evaluation(settings: Settings | None = None, sample_size: int | No
     try:
         metrics = await _run_ragas_metrics(results, settings)
     except Exception as e:
-        log_warning(f"RAGAS metrics failed (are RAGAS deps installed?): {e}")
+        log_warning(f"RAGAS metrics failed: {e}")
         metrics = {"error": str(e)}
 
-    report = {"total_questions": len(dataset), "metrics": metrics, "results": results}
+    by_difficulty = defaultdict(list)
+    for r in results:
+        by_difficulty[r["difficulty"]].append(r)
 
-    output_path = Path("evaluation/results.json")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
+    log_header("BY DIFFICULTY")
+    for difficulty, items in by_difficulty.items():
+        error_count = sum(1 for r in items if r["answer"].startswith("ERROR"))
+        log_info(f"  {difficulty}: {len(items)} questions, {error_count} errors")
+
+    report = {
+        "total_questions": len(dataset),
+        "metrics": metrics,
+        "by_difficulty": {d: len(items) for d, items in by_difficulty.items()},
+        "results": results,
+    }
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
 
-    log_success(f"Results saved to {output_path}")
+    log_success(f"Results saved to {path}")
 
     if "error" not in metrics:
         log_header("METRICS SUMMARY")
@@ -105,7 +126,7 @@ async def _run_ragas_metrics(results: list[dict], settings: Settings) -> dict:
     questions = [r["question"] for r in results]
     answers = [r["answer"] for r in results]
     expected = [r["expected_answer"] for r in results]
-    contexts = [[r["expected_answer"]] for r in results]
+    contexts = [r.get("contexts", [""]) for r in results]
 
     hf_dataset = HFDataset.from_dict(
         {
@@ -118,10 +139,10 @@ async def _run_ragas_metrics(results: list[dict], settings: Settings) -> dict:
 
     llm_judge = _get_judge_llm(settings)
     metrics = [
-        Faithfulness,
-        AnswerRelevancy,
-        ContextPrecision,
-        ContextRecall,
+        Faithfulness(),
+        AnswerRelevancy(),
+        ContextPrecision(),
+        ContextRecall(),
     ]
 
     scores = evaluate(
@@ -165,7 +186,7 @@ def _get_judge_llm(settings: Settings):
 @click.option("--sample", default=None, type=int, help="Limit to N questions")
 @click.option("--output", default="evaluation/results.json", help="Output file path")
 def cli(sample, output):
-    asyncio.run(run_evaluation(settings=Settings(), sample_size=sample))
+    asyncio.run(run_evaluation(settings=Settings(), sample_size=sample, output_path=output))
 
 
 if __name__ == "__main__":
