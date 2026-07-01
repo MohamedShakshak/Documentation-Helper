@@ -97,7 +97,7 @@ class TestDatabaseSettings:
 
 
 class TestSettings:
-    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive", "OBSERVABILITY__ENABLED": "false"})
+    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive", "OBSERVABILITY__ENABLED": "false", "LLM__PROVIDER": "ollama"})
     def test_defaults(self):
         settings = Settings()
         assert settings.llm.provider == "ollama"
@@ -115,6 +115,7 @@ class TestSettings:
         assert settings.llm.provider == "openrouter"
         assert settings.embedding.model == "bge-small"
 
+    @patch.dict(os.environ, {"LLM__PROVIDER": "ollama"})
     def test_get_settings(self):
         settings = get_settings()
         assert isinstance(settings, Settings)

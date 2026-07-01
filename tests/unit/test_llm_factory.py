@@ -33,13 +33,13 @@ class TestCreateChatModel:
 
     def test_openrouter_with_api_key(self):
         settings = LLMSettings(provider="openrouter", model="gpt-4o", openrouter_api_key="sk-test")
-        with patch("doc_helper.llm.factory.init_chat_model") as mock_init:
-            mock_init.return_value = MagicMock()
+        with patch("langchain_openai.ChatOpenAI") as mock_chat:
+            mock_chat.return_value = MagicMock()
             create_chat_model(settings)
-            mock_init.assert_called_once_with(
-                "gpt-4o",
-                model_provider="openrouter",
-                openrouter_api_key="sk-test",
+            mock_chat.assert_called_once_with(
+                model="gpt-4o",
+                base_url="https://openrouter.ai/api/v1",
+                api_key="sk-test",
                 temperature=0.0,
             )
 

@@ -21,10 +21,12 @@ def create_chat_model(settings: LLMSettings | None = None) -> BaseChatModel:
             raise ValueError(
                 "LLM__OPENROUTER_API_KEY is required when LLM__PROVIDER=openrouter"
             )
-        return init_chat_model(
-            settings.model,
-            model_provider="openrouter",
-            openrouter_api_key=settings.openrouter_api_key,
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=settings.model,
+            base_url="https://openrouter.ai/api/v1",
+            api_key=settings.openrouter_api_key,
             temperature=settings.temperature,
         )
 

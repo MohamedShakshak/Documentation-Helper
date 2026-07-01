@@ -1,0 +1,21 @@
+{
+  "total_questions": 1,
+  "metrics": {
+    "error": "No module named 'langchain_community.chat_models.vertexai'"
+  },
+  "results": [
+    {
+      "question": "What is LangChain?",
+      "expected_answer": "LangChain is a framework for building applications powered by large language models (LLMs). It provides modular components for chaining prompts, models, tools, and memory together.",
+      "answer": "LangChain is a framework that provides integrations and composable components to streamline the development of applications powered by large language models (LLMs). It includes agent abstractions built on top of LangGraph and aims to help developers build, deploy, and manage LLM‑based applications more easily【https://docs.langchain.com/oss/python/langgraph/overview】. The project has also grown into a large developer community focused on generative AI【https://docs.langchain.com/oss/python/contributing/overview】.",
+      "sources": [
+        "https://docs.langchain.com/oss/python/contributing/overview",
+        "https://www.langchain.com/",
+        "https://docs.langchain.com/oss/python/contributing/overview",
+        "https://docs.langchain.com/oss/python/langgraph/overview",
+        "https://docs.langchain.com/oss/python/langchain"
+      ],
+      "difficulty": "simple"
+    }
+  ]
+}

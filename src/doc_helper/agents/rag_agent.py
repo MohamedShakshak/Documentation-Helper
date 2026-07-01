@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import asyncio
+
 from langchain.agents import create_agent
 from langchain.messages import ToolMessage
 from langchain_core.language_models import BaseChatModel
@@ -16,7 +18,6 @@ from doc_helper.agents.events import (
 from doc_helper.agents.middleware import (
     guardrails_middleware,
     summarization_middleware,
-    tool_retry_middleware,
 )
 from doc_helper.agents.tools import create_tools
 from doc_helper.config.settings import AgentSettings, Settings
@@ -60,7 +61,6 @@ class RAGAgent:
             retriever=retriever,
             ingestion_settings=ingestion_settings,
             enable_web_search=enable_web_search,
-            retry_wrapper=tool_retry_middleware(self._agent_settings),
         )
         self._agent = create_agent(
             self._llm, tools=self._tools, system_prompt=_SYSTEM_PROMPT
@@ -71,14 +71,24 @@ class RAGAgent:
             conversation_manager, llm, self._agent_settings
         )
 
+    def _maybe_summarize(self, conversation_id: str | None) -> None:
+        if not self._summarize:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_running():
+                loop.create_task(self._summarize(conversation_id))
+            else:
+                asyncio.run(self._summarize(conversation_id))
+        except RuntimeError:
+            asyncio.run(self._summarize(conversation_id))
+
     def run(self, query: str, conversation_id: str | None = None) -> dict[str, Any]:
         guardrail_error = self._guardrails(query)
         if guardrail_error:
             return {"answer": guardrail_error, "context": [], "sources": []}
 
-        if self._summarize:
-            import asyncio
-            asyncio.run(self._summarize(conversation_id))
+        self._maybe_summarize(conversation_id)
 
         messages = self._build_messages(query, conversation_id)
         response = self._agent.invoke({"messages": messages})

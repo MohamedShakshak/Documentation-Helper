@@ -15,6 +15,10 @@ async def run_evaluation(settings: Settings | None = None, sample_size: int | No
     if settings is None:
         settings = Settings()
 
+    import os
+    os.environ.pop("LANGSMITH_API_KEY", None)
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
+
     log_header("RAGAS EVALUATION")
     log_info("Loading gold dataset...")
 

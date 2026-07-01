@@ -90,9 +90,12 @@ def summarization_middleware(
 
 
 def tool_retry_middleware(settings: AgentSettings):
+    from functools import wraps
+
     max_retries = settings.max_tool_retries
 
     def _wrap(func):
+        @wraps(func)
         async def _retry_wrapper(*args, **kwargs):
             last_error = None
             for attempt in range(max_retries + 1):
@@ -105,6 +108,7 @@ def tool_retry_middleware(settings: AgentSettings):
                     )
             raise last_error
 
+        @wraps(func)
         def _sync_wrapper(*args, **kwargs):
             last_error = None
             for attempt in range(max_retries + 1):
