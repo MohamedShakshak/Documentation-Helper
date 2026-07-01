@@ -39,7 +39,7 @@ class RetrievalSettings(BaseSettings):
 
 
 class IngestionSettings(BaseSettings):
-    crawler: Literal["tavily", "recursive", "local"] = "recursive"
+    crawler: Literal["tavily", "recursive", "local"] = "tavily"
     tavily_api_key: str | None = None
     crawl_url: str = "https://python.langchain.com/docs/"
     crawl_depth: int = 2

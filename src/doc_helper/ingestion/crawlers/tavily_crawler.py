@@ -37,6 +37,8 @@ class TavilyCrawler(BaseCrawler):
         documents = []
         for item in raw_results:
             url = item.get("url", "Unknown")
+            if not self._is_content_page(url):
+                continue
             content = item.get("raw_content", "")
             if content:
                 doc_title = (
@@ -56,3 +58,16 @@ class TavilyCrawler(BaseCrawler):
                     )
                 )
         return documents
+
+    @staticmethod
+    def _is_content_page(url: str) -> bool:
+        import re
+        skip_domains = ["blog.", "forum.", "academy.", "trust.", "changelog."]
+        for domain in skip_domains:
+            if domain in url:
+                return False
+        skip_patterns = [r"/careers", r"llms\.txt$"]
+        for pattern in skip_patterns:
+            if re.search(pattern, url):
+                return False
+        return True
