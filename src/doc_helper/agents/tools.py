@@ -31,7 +31,7 @@ def _make_web_search_tool(tavily_api_key: str | None = None):
     if not api_key:
         raise ValueError("Tavily API key required for web_search tool")
 
-    client = TavilySearch(api_key=api_key, max_results=5)
+    client = TavilySearch(tavily_api_key=api_key, max_results=5)
 
     @tool(response_format="content_and_artifact")
     def web_search(query: str):
