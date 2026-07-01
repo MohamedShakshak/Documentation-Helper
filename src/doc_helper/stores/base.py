@@ -19,6 +19,11 @@ class BaseVectorStore(ABC):
     def get_embedding_model_name(self) -> str | None:
         ...
 
+    @abstractmethod
+    def get_existing_hashes(self) -> set[str]:
+        """Return all content_hash values currently stored in the collection."""
+        ...
+
     def validate_embedding_model(self, configured_model: str) -> None:
         stored_model = self.get_embedding_model_name()
         if stored_model and stored_model != configured_model:

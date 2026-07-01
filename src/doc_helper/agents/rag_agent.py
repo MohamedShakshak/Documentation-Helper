@@ -30,11 +30,11 @@ _SYSTEM_PROMPT = (
     "2. web_search — Search the web for information not found locally.\n"
     "3. check_links — Verify whether specific URLs are reachable.\n\n"
     "Guidelines:\n"
-    "- Always try retrieve_context before web_search.\n"
-    "- If retrieve_context doesn't find relevant info, use web_search.\n"
-    "- Use check_links only when the user asks about URL validity.\n"
-    "- Always cite sources you use in your answers.\n"
-    "- If you cannot find the answer, say so honestly."
+    "- Always use retrieve_context first.\n"
+    "- If retrieve_context returns no results, you MUST call web_search before answering.\n"
+    "- Never answer from memory alone. Always retrieve context or search first.\n"
+    "- Always cite the source_url of retrieved docs in your answers.\n"
+    "- Use check_links only when the user asks about URL validity."
 )
 
 

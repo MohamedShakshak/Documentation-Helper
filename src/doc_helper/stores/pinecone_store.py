@@ -54,3 +54,6 @@ class PineconeVectorStore(BaseVectorStore):
             return metadata.get(self.EMBEDDING_MODEL_METADATA_KEY)
         except Exception:
             return None
+
+    def get_existing_hashes(self) -> set[str]:
+        return set()

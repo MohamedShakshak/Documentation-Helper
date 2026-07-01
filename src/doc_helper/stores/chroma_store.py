@@ -78,3 +78,11 @@ class ChromaVectorStore(BaseVectorStore):
     def get_embedding_model_name(self) -> str | None:
         metadata = self._store._collection.metadata
         return metadata.get(self.EMBEDDING_MODEL_METADATA_KEY)
+
+    def get_existing_hashes(self) -> set[str]:
+        results = self._store._collection.get(include=["metadatas"])
+        return {
+            m["content_hash"]
+            for m in results["metadatas"]
+            if "content_hash" in m
+        }

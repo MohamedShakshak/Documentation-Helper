@@ -16,28 +16,39 @@ def _compute_content_hash(content: str) -> str:
     return f"sha256:{hashlib.sha256(content.encode()).hexdigest()}"
 
 
+def _extract_version(content: str, url: str | None = None) -> str | None:
+    import re
+
+    if url:
+        match = re.search(r"v(\d+\.\d+)", url)
+        if match:
+            return match.group(0)
+    match = re.search(r"langchain[=>]=\s*(\d+\.\d+\.\d+)", content[:500])
+    if match:
+        return match.group(1)
+    match = re.search(r"v(\d+\.\d+)", content[:500])
+    if match:
+        return match.group(0)
+    return None
+
+
 def _enrich_metadata(documents: list) -> list:
     now = datetime.now(UTC).isoformat()
     for doc in documents:
         doc.metadata["ingested_at"] = now
         doc.metadata["content_hash"] = _compute_content_hash(doc.page_content)
         doc.metadata["word_count"] = len(doc.page_content.split())
+        version = _extract_version(doc.page_content, doc.metadata.get("source_url"))
+        if version:
+            doc.metadata["langchain_version"] = version
     return documents
 
 
 def _filter_duplicates(documents: list, store: BaseVectorStore) -> tuple[list, int]:
-    existing_hashes: set[str] = set()
     try:
-
-        existing = store.as_retriever().invoke("__dedup_check__")
-        for doc in existing:
-            if hasattr(doc, "metadata"):
-                h = doc.metadata.get("content_hash")
-                if h:
-                    existing_hashes.add(h)
+        existing_hashes = store.get_existing_hashes()
     except Exception:
-        pass
-
+        existing_hashes = set()
     unique: list = []
     skipped = 0
     for doc in documents:
@@ -46,8 +57,8 @@ def _filter_duplicates(documents: list, store: BaseVectorStore) -> tuple[list, i
             skipped += 1
         else:
             unique.append(doc)
-            existing_hashes.add(h)
-
+            if h:
+                existing_hashes.add(h)
     return unique, skipped
 
 
