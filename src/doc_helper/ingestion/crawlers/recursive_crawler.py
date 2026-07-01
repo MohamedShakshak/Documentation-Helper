@@ -38,12 +38,21 @@ class RecursiveCrawler(BaseCrawler):
             prevent_outside=self._settings.crawl_prevent_outside,
             check_response_status=True,
         )
-        loop = asyncio.get_event_loop()
-        docs = await loop.run_in_executor(None, loader.load)
+        docs = loader.load()
         return [
             {"url": doc.metadata.get("source", "Unknown"), "raw_content": doc.page_content}
             for doc in docs
+            if self._is_content_page(doc.metadata.get("source", ""))
         ]
+
+    @staticmethod
+    def _is_content_page(url: str) -> bool:
+        import re
+        if re.search(r"\.(css|js|woff2?|png|jpg|gif|ico|svg|xml|json|txt)$", url):
+            return False
+        if re.search(r"/_next/|/mintlify-assets/|/fonts/", url):
+            return False
+        return True
 
     def to_documents(self, raw_results: list[dict[str, Any]]) -> list[Document]:
         documents = []
