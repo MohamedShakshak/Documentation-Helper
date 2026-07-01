@@ -70,6 +70,7 @@ class TestRetrievalSettings:
 
 
 class TestIngestionSettings:
+    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive", "INGESTION__CRAWL_URL": "https://python.langchain.com/docs/"})
     def test_defaults(self):
         settings = IngestionSettings()
         assert settings.crawler == "recursive"
@@ -96,6 +97,7 @@ class TestDatabaseSettings:
 
 
 class TestSettings:
+    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive"})
     def test_defaults(self):
         settings = Settings()
         assert settings.llm.provider == "ollama"

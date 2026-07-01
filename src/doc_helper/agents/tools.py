@@ -1,4 +1,5 @@
 import re
+from collections.abc import Callable
 
 import httpx
 from langchain.tools import tool
@@ -96,6 +97,7 @@ def create_tools(
     retriever: Retriever,
     ingestion_settings: IngestionSettings | None = None,
     enable_web_search: bool = True,
+    retry_wrapper: Callable | None = None,
 ):
     tools = [_make_retrieval_tool(retriever)]
 
@@ -105,4 +107,8 @@ def create_tools(
             tools.append(_make_web_search_tool(settings.tavily_api_key))
 
     tools.append(_make_check_links_tool())
+
+    if retry_wrapper:
+        tools = [retry_wrapper(t) for t in tools]
+
     return tools

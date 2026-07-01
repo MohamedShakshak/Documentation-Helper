@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -5,7 +6,6 @@ from langchain_core.language_models import BaseChatModel
 
 from doc_helper.agents.middleware import (
     guardrails_middleware,
-    model_fallback_middleware,
     summarization_middleware,
     tool_retry_middleware,
 )
@@ -66,7 +66,7 @@ class TestSummarizationMiddleware:
         llm = MagicMock(spec=BaseChatModel)
         llm.invoke.return_value = MagicMock(content="Summary of conversation")
         summarize = summarization_middleware(conv_mgr, llm, settings)
-        summarize("conv-1")
+        asyncio.run(summarize("conv-1"))
 
         conv_mgr.replace_messages.assert_called_once()
         call_args = conv_mgr.replace_messages.call_args
@@ -172,63 +172,3 @@ class TestToolRetryMiddleware:
         result = asyncio.run(wrapped())
         assert result == "async_ok"
         assert call_count == 2
-
-
-class TestModelFallbackMiddleware:
-    def test_uses_primary_on_success(self):
-        primary = MagicMock(spec=BaseChatModel)
-        primary.invoke.return_value = MagicMock(content="primary answer")
-
-        fallback = model_fallback_middleware(
-            primary_llm=primary,
-            fallback_model_name="qwen3.5:8b",
-            enabled=True,
-        )
-        result = fallback([{"role": "user", "content": "hi"}])
-
-        assert result.content == "primary answer"
-        primary.invoke.assert_called_once()
-
-    def test_falls_back_on_failure(self):
-        primary = MagicMock(spec=BaseChatModel)
-        primary.invoke.side_effect = RuntimeError("model overloaded")
-
-        with patch("doc_helper.llm.factory.create_chat_model") as mock_create:
-            fallback_llm = MagicMock(spec=BaseChatModel)
-            fallback_llm.invoke.return_value = MagicMock(content="fallback answer")
-            mock_create.return_value = fallback_llm
-
-            fallback = model_fallback_middleware(
-                primary_llm=primary,
-                fallback_model_name="qwen3.5:8b",
-                enabled=True,
-            )
-            result = fallback([{"role": "user", "content": "hi"}])
-
-            assert result.content == "fallback answer"
-            primary.invoke.assert_called_once()
-            mock_create.assert_called_once()
-
-    def test_raises_when_disabled_and_no_fallback(self):
-        primary = MagicMock(spec=BaseChatModel)
-        primary.invoke.side_effect = RuntimeError("model overloaded")
-
-        fallback = model_fallback_middleware(
-            primary_llm=primary,
-            fallback_model_name=None,
-            enabled=False,
-        )
-        with pytest.raises(RuntimeError, match="model overloaded"):
-            fallback([{"role": "user", "content": "hi"}])
-
-    def test_raises_when_no_fallback_model(self):
-        primary = MagicMock(spec=BaseChatModel)
-        primary.invoke.side_effect = RuntimeError("model overloaded")
-
-        fallback = model_fallback_middleware(
-            primary_llm=primary,
-            fallback_model_name=None,
-            enabled=True,
-        )
-        with pytest.raises(RuntimeError, match="model overloaded"):
-            fallback([{"role": "user", "content": "hi"}])

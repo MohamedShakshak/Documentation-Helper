@@ -16,6 +16,7 @@ from doc_helper.agents.events import (
 from doc_helper.agents.middleware import (
     guardrails_middleware,
     summarization_middleware,
+    tool_retry_middleware,
 )
 from doc_helper.agents.tools import create_tools
 from doc_helper.config.settings import AgentSettings, Settings
@@ -59,6 +60,7 @@ class RAGAgent:
             retriever=retriever,
             ingestion_settings=ingestion_settings,
             enable_web_search=enable_web_search,
+            retry_wrapper=tool_retry_middleware(self._agent_settings),
         )
         self._agent = create_agent(
             self._llm, tools=self._tools, system_prompt=_SYSTEM_PROMPT
@@ -74,7 +76,9 @@ class RAGAgent:
         if guardrail_error:
             return {"answer": guardrail_error, "context": [], "sources": []}
 
-        self._summarize(conversation_id)
+        if self._summarize:
+            import asyncio
+            asyncio.run(self._summarize(conversation_id))
 
         messages = self._build_messages(query, conversation_id)
         response = self._agent.invoke({"messages": messages})
@@ -96,7 +100,8 @@ class RAGAgent:
             yield ErrorEvent(message=guardrail_error)
             return
 
-        self._summarize(conversation_id)
+        if self._summarize:
+            await self._summarize(conversation_id)
 
         try:
             messages = self._build_messages(query, conversation_id)
@@ -200,8 +205,8 @@ def create_rag_agent(
     settings: Settings | None = None,
     conversation_manager: ConversationManager | None = None,
 ) -> RAGAgent:
-    from doc_helper.config.settings import Settings as _Settings
     from doc_helper.config.settings import LLMSettings as _LLMSettings
+    from doc_helper.config.settings import Settings as _Settings
     from doc_helper.llm.factory import create_chat_model
     from doc_helper.observability.factory import create_tracer as _create_tracer
     from doc_helper.stores.factory import create_vector_store
