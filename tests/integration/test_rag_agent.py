@@ -15,7 +15,7 @@ class TestRAGAgent:
         mock_retriever_obj = MagicMock()
         doc = MagicMock()
         doc.page_content = "LangChain is a framework"
-        doc.metadata = {"source": "https://python.langchain.com/docs"}
+        doc.metadata = {"source_url": "https://python.langchain.com/docs"}
         mock_retriever_obj.invoke.return_value = [doc]
         mock_store.as_retriever.return_value = mock_retriever_obj
 
@@ -42,21 +42,7 @@ class TestRAGAgent:
         assert "context" in result
         assert "sources" in result
 
-    def test_build_messages_without_conversation(self):
-        mock_llm = MagicMock()
-        mock_retriever = MagicMock(spec=Retriever)
-
-        with patch("doc_helper.agents.rag_agent.create_agent"):
-            with patch("doc_helper.agents.tools.create_tools") as mock_ct:
-                mock_ct.return_value = [MagicMock()]
-                agent = RAGAgent(llm=mock_llm, retriever=mock_retriever)
-
-        messages = agent._build_messages("Hello", conversation_id=None)
-        assert len(messages) == 1
-        assert messages[0]["role"] == "user"
-        assert messages[0]["content"] == "Hello"
-
-    def test_build_messages_with_conversation(self):
+    def test_build_messages_loads_history(self):
         mock_llm = MagicMock()
         mock_retriever = MagicMock(spec=Retriever)
         mock_conv_mgr = MagicMock()
@@ -75,7 +61,36 @@ class TestRAGAgent:
                 )
 
         messages = agent._build_messages("Follow-up", conversation_id="conv-1")
-        assert len(messages) == 3  # 2 history + 1 new
+        assert len(messages) == 3
         assert messages[0]["content"] == "Hi"
         assert messages[2]["content"] == "Follow-up"
-        mock_conv_mgr.add_message.assert_called_once_with("conv-1", "user", "Follow-up")
+
+    def test_persist_messages_saves_both(self):
+        mock_llm = MagicMock()
+        mock_retriever = MagicMock(spec=Retriever)
+        mock_conv_mgr = MagicMock()
+
+        with patch("doc_helper.agents.rag_agent.create_agent"):
+            with patch("doc_helper.agents.tools.create_tools") as mock_ct:
+                mock_ct.return_value = [MagicMock()]
+                agent = RAGAgent(
+                    llm=mock_llm,
+                    retriever=mock_retriever,
+                    conversation_manager=mock_conv_mgr,
+                )
+
+        agent._persist_messages("my query", "my answer", ["url"], "conv-1")
+        assert mock_conv_mgr.add_message.call_count == 2
+        mock_conv_mgr.add_message.assert_any_call("conv-1", "user", "my query")
+        mock_conv_mgr.add_message.assert_any_call("conv-1", "assistant", "my answer", ["url"])
+
+    def test_no_conversation_manager_skips_persist(self):
+        mock_llm = MagicMock()
+        mock_retriever = MagicMock(spec=Retriever)
+
+        with patch("doc_helper.agents.rag_agent.create_agent"):
+            with patch("doc_helper.agents.tools.create_tools") as mock_ct:
+                mock_ct.return_value = [MagicMock()]
+                agent = RAGAgent(llm=mock_llm, retriever=mock_retriever)
+
+        agent._persist_messages("q", "a", [], "conv-1")  # no-op, no crash

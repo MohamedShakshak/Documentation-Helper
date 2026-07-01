@@ -14,6 +14,8 @@ def _make_retrieval_tool(retriever: Retriever):
         """Retrieve relevant documentation from the local vector store to help answer
         user queries. Use this tool first before attempting web search."""
         retrieved_docs = retriever.retrieve(query)
+        if not retrieved_docs:
+            return "No relevant documentation found. Try web_search instead.", []
         serialized = "\n\n".join(
             f"Source: {doc.metadata.get('source_url', doc.metadata.get('source', 'Unknown'))}\n\n"
             f"Content: {doc.page_content}"
@@ -31,7 +33,7 @@ def _make_web_search_tool(tavily_api_key: str | None = None):
 
     client = TavilySearch(api_key=api_key, max_results=5)
 
-    @tool
+    @tool(response_format="content_and_artifact")
     def web_search(query: str):
         """Search the web for up-to-date information when local documentation
         doesn't contain the answer. Use this for recent API changes, release notes,
@@ -44,14 +46,20 @@ def _make_web_search_tool(tavily_api_key: str | None = None):
         else:
             results = []
 
-        snippets = []
+        snippets: list[str] = []
+        urls: list[str] = []
         for item in results[:5]:
             title = item.get("title", "Unknown")
             url = item.get("url", "Unknown")
             content = item.get("content", "")
             snippets.append(f"[{title}]({url})\n{content}")
+            urls.append(url)
 
-        return "\n\n---\n\n".join(snippets) if snippets else "No web results found."
+        if not snippets:
+            return "No web results found.", []
+
+        serialized = "\n\n---\n\n".join(snippets)
+        return serialized, urls
 
     return web_search
 

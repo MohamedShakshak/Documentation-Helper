@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from langchain.agents import create_agent
@@ -84,46 +84,9 @@ class RAGAgent:
         if context_docs:
             self._tracer.trace_retrieval(query, context_docs)
 
-        if self._conversation_manager and conversation_id:
-            self._conversation_manager.add_message(conversation_id, "assistant", answer, sources)
+        self._persist_messages(query, answer, sources, conversation_id)
 
         return {"answer": answer, "context": context_docs, "sources": sources}
-
-    def stream(
-        self, query: str, conversation_id: str | None = None
-    ) -> Generator[SSEEvent, None, None]:
-        guardrail_error = self._guardrails(query)
-        if guardrail_error:
-            yield ErrorEvent(message=guardrail_error)
-            return
-
-        self._summarize(conversation_id)
-
-        try:
-            messages = self._build_messages(query, conversation_id)
-            collected_answer: list[str] = []
-            collected_sources: list[str] = []
-
-            for event in self._agent.astream_events(
-                {"messages": messages}, version="v2"
-            ):
-                yield from self._process_stream_event(
-                    event, collected_answer, collected_sources
-                )
-
-            answer = "".join(collected_answer).strip()
-            self._tracer.trace_agent_run(query, answer, collected_sources)
-
-            if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(
-                    conversation_id, "assistant", answer, collected_sources
-                )
-            yield DoneEvent(
-                conversation_id=conversation_id or "", sources=collected_sources
-            )
-
-        except Exception as e:
-            yield ErrorEvent(message=str(e))
 
     async def astream(
         self, query: str, conversation_id: str | None = None
@@ -151,10 +114,7 @@ class RAGAgent:
             answer = "".join(collected_answer).strip()
             self._tracer.trace_agent_run(query, answer, collected_sources)
 
-            if self._conversation_manager and conversation_id:
-                self._conversation_manager.add_message(
-                    conversation_id, "assistant", answer, collected_sources
-                )
+            self._persist_messages(query, answer, collected_sources, conversation_id)
             yield DoneEvent(
                 conversation_id=conversation_id or "", sources=collected_sources
             )
@@ -164,7 +124,7 @@ class RAGAgent:
 
     def _process_stream_event(
         self, event: dict, answer_acc: list[str] | None = None, sources_acc: list[str] | None = None
-    ) -> Generator[SSEEvent, None, None]:
+    ) -> Any:
         kind = event["event"]
         data = event.get("data", {})
 
@@ -188,11 +148,13 @@ class RAGAgent:
             artifact = data.get("output")
             sources: list[str] = []
             if isinstance(artifact, list):
-                sources = [
-                    doc.metadata.get("source_url", doc.metadata.get("source", "Unknown"))
-                    for doc in artifact
-                    if hasattr(doc, "metadata")
-                ]
+                for item in artifact:
+                    if isinstance(item, str):
+                        sources.append(item)
+                    elif hasattr(item, "metadata"):
+                        sources.append(
+                            item.metadata.get("source_url", item.metadata.get("source", "Unknown"))
+                        )
             if sources_acc is not None:
                 sources_acc.extend(sources)
             yield ToolResultEvent(sources=sources, num_docs=len(sources))
@@ -204,11 +166,14 @@ class RAGAgent:
             for msg in history:
                 messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": query})
+        return messages
 
+    def _persist_messages(
+        self, query: str, answer: str, sources: list[str], conversation_id: str | None
+    ) -> None:
         if self._conversation_manager and conversation_id:
             self._conversation_manager.add_message(conversation_id, "user", query)
-
-        return messages
+            self._conversation_manager.add_message(conversation_id, "assistant", answer, sources)
 
     def _extract_response(self, response: dict) -> tuple[str, list, list[str]]:
         answer = response["messages"][-1].content
@@ -217,12 +182,15 @@ class RAGAgent:
         for message in response["messages"]:
             if isinstance(message, ToolMessage) and hasattr(message, "artifact"):
                 if isinstance(message.artifact, list):
-                    context_docs.extend(message.artifact)
-                    for doc in message.artifact:
-                        if hasattr(doc, "metadata"):
+                    for item in message.artifact:
+                        if isinstance(item, str):
+                            sources.append(item)
+                        elif hasattr(item, "metadata"):
+                            context_docs.append(item)
                             sources.append(
-                                doc.metadata.get(
-                                    "source_url", doc.metadata.get("source", "Unknown")
+                                item.metadata.get(
+                                    "source_url",
+                                    item.metadata.get("source", "Unknown"),
                                 )
                             )
         return str(answer), context_docs, sources

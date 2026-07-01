@@ -43,6 +43,26 @@ class TestRetrieveContextTool:
         assert "LangChain is a framework" in serialized
         assert "https://example.com/docs" in serialized
 
+    @patch("doc_helper.retrieval.reranker.Reranker")
+    def test_retrieve_context_empty_returns_hint(self, _mock_reranker):
+        from doc_helper.agents.tools import _make_retrieval_tool
+
+        mock_store = MagicMock(spec=BaseVectorStore)
+        mock_retriever = MagicMock()
+        mock_store.as_retriever.return_value = mock_retriever
+        mock_retriever.invoke.return_value = []
+
+        retriever = Retriever(mock_store)
+        tool = _make_retrieval_tool(retriever)
+        result = tool.invoke({"query": "nonexistent"})
+
+        if isinstance(result, tuple):
+            serialized, artifact = result
+        else:
+            serialized = str(result)
+        assert "No relevant documentation" in serialized
+        assert "web_search" in serialized
+
 
 class TestWebSearchTool:
     def test_requires_api_key(self):
@@ -65,10 +85,11 @@ class TestWebSearchTool:
         }
 
         tool = _make_web_search_tool("tvly-test")
-        result = tool.invoke({"query": "latest langchain updates"})
+        serialized = tool.invoke({"query": "latest langchain updates"})
 
-        assert "Result 1" in result
-        assert "https://example.com/1" in result
+        assert isinstance(serialized, str)
+        assert "Result 1" in serialized
+        assert "https://example.com/1" in serialized
 
     @patch("doc_helper.agents.tools.TavilySearch")
     def test_web_search_handles_empty_results(self, mock_tavily_cls):
@@ -79,9 +100,10 @@ class TestWebSearchTool:
         mock_client.invoke.return_value = {"results": []}
 
         tool = _make_web_search_tool("tvly-test")
-        result = tool.invoke({"query": "nonexistent topic"})
+        serialized = tool.invoke({"query": "nonexistent topic"})
 
-        assert "No web results" in result
+        assert isinstance(serialized, str)
+        assert "No web results" in serialized
 
 
 class TestCheckLinksTool:
