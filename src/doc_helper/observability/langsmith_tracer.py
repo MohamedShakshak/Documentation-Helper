@@ -10,9 +10,12 @@ class LangSmithTracer(BaseTracer):
     def __init__(self, api_key: str, project: str = "documentation-helper"):
         import os
 
-        os.environ["LANGCHAIN_API_KEY"] = api_key
-        os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        os.environ["LANGCHAIN_PROJECT"] = project
+        os.environ.setdefault("LANGCHAIN_API_KEY", api_key)
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+        os.environ.setdefault("LANGCHAIN_PROJECT", project)
+
+        if os.environ.get("LANGSMITH_ENDPOINT"):
+            os.environ.setdefault("LANGCHAIN_ENDPOINT", os.environ["LANGSMITH_ENDPOINT"])
 
         logger.info(f"LangSmith tracer initialized (project={project})")
 

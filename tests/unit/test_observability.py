@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,6 +30,7 @@ class TestCreateTracer:
         with pytest.raises(ValueError, match="LangFuse"):
             create_tracer(settings)
 
+    @patch.dict(os.environ, {"LANGSMITH_API_KEY": ""})
     def test_langsmith_without_key_raises(self):
         settings = ObservabilitySettings(
             enabled=True, provider="langsmith", langsmith_api_key=None,

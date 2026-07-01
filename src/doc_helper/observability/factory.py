@@ -24,10 +24,16 @@ def create_tracer(settings: ObservabilitySettings | None = None) -> BaseTracer:
         )
 
     if settings.provider == "langsmith":
-        if not settings.langsmith_api_key:
-            raise ValueError("LangSmith tracer requires OBSERVABILITY__LANGSMITH_API_KEY")
+        import os
+
+        api_key = settings.langsmith_api_key or os.environ.get("LANGSMITH_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "LangSmith tracer requires OBSERVABILITY__LANGSMITH_API_KEY "
+                "or LANGSMITH_API_KEY environment variable"
+            )
         from doc_helper.observability.langsmith_tracer import LangSmithTracer
 
-        return LangSmithTracer(api_key=settings.langsmith_api_key)
+        return LangSmithTracer(api_key=api_key)
 
     raise ValueError(f"Unknown observability provider: {settings.provider}")

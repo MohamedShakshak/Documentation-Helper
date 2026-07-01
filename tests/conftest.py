@@ -1,4 +1,16 @@
+import os
+from unittest.mock import patch
+
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def disable_langsmith():
+    with patch.dict(os.environ, {
+        "LANGCHAIN_TRACING_V2": "false",
+        "LANGSMITH_API_KEY": "",
+    }):
+        yield
 
 
 def test_config_settings_import():

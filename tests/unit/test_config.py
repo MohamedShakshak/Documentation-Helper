@@ -97,7 +97,7 @@ class TestDatabaseSettings:
 
 
 class TestSettings:
-    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive"})
+    @patch.dict(os.environ, {"INGESTION__CRAWLER": "recursive", "OBSERVABILITY__ENABLED": "false"})
     def test_defaults(self):
         settings = Settings()
         assert settings.llm.provider == "ollama"
