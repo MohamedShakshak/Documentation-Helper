@@ -25,6 +25,7 @@ data/
 chroma_db/
 
 # Evaluation results
+evaluation/results.json
 evaluation/results/
 
 # Docker
@@ -46,5 +47,5 @@ uv.lock
 # Logs
 *.log
 
-
+# Local-only architecture doc
 PLAN.md
