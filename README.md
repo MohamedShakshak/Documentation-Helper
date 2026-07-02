@@ -62,6 +62,7 @@ Every chunk carries this metadata:
 - **SSE streaming** — Typed server-sent events (`agent_thought`, `tool_call`, `tool_result`, `answer`, `done`, `error`)
 - **Conversation persistence** — SQLite with CRUD for conversations and messages
 - **Observability** — LangFuse (default) and LangSmith tracing (factory pattern, NoOp when disabled)
+- **Retrieval evaluation** — 25-query URL-labeled dataset, 12-config sweep (search type × k × reranker), IR metrics (hit rate, MRR, precision@k, recall@k)
 - **RAGAS evaluation** — 30 Q&A gold dataset (3 difficulty levels), CLI runner, OpenRouter judge
 - **Ingestion pipeline** — Tavily, recursive URL, and local file crawlers; CLI and async API
 - **Docker** — Multi-profile compose (dev/full/production)
@@ -199,6 +200,9 @@ See `.env.example` for the full list.
 # Ingest documentation
 uv run python -m doc_helper.ingestion.pipeline --url <URL> --depth 2 --crawler recursive
 
+# Run retrieval evaluation (12-config sweep)
+uv run doc-helper-retrieval-eval
+
 # Run RAGAS evaluation
 uv run python -m doc_helper.evaluation.runner --sample 10
 
@@ -228,6 +232,74 @@ docker compose --profile production up
 
 ## Evaluation
 
+### Retrieval Evaluation
+
+Measures the retrieval pipeline quality **before generation** — can the vector store surface the right documents?
+
+**Dataset:** 25 queries across 3 difficulty levels (simple, multi_hop, edge_case), labeled with relevant source URLs.
+
+**Config sweep:** 2 search types × 3 k values × 2 reranker states = 12 configurations.
+
+**Metrics:**
+
+| Metric | What it measures |
+|--------|-----------------|
+| **Hit Rate** | Fraction of queries with ≥1 relevant doc in top-k |
+| **MRR** (Mean Reciprocal Rank) | How high the first relevant doc ranks |
+| **Precision@k** | Fraction of retrieved docs that are relevant |
+| **Recall@k** | Fraction of relevant docs that were retrieved |
+
+**Full results (25 queries, BGE-base embeddings, 899 chunks):**
+
+| Search Type | k | Reranker | Hit Rate | MRR | P@K | R@K |
+|-------------|---|----------|----------|-----|-----|-----|
+| **mmr** | **8** | **No** | **1.0000** | **0.6008** | **0.3650** | **0.8800** |
+| mmr | 8 | Yes | 1.0000 | 0.6920 | 0.3650 | 0.8800 |
+| mmr | 16 | No | 1.0000 | 0.5939 | 0.3500 | 0.8800 |
+| mmr | 16 | Yes | 1.0000 | 0.6768 | 0.3500 | 0.8800 |
+| similarity | 16 | No | 0.9600 | 0.5914 | 0.3600 | 0.8400 |
+| similarity | 16 | Yes | 0.9600 | 0.7052 | 0.3600 | 0.8400 |
+| mmr | 4 | No | 0.8400 | 0.6000 | 0.3600 | 0.7000 |
+| mmr | 4 | Yes | 0.8400 | 0.6633 | 0.3600 | 0.7000 |
+| similarity | 8 | No | 0.8000 | 0.5763 | 0.4350 | 0.7200 |
+| similarity | 8 | Yes | 0.8000 | 0.6413 | 0.4350 | 0.7200 |
+| similarity | 4 | No | 0.7200 | 0.5633 | 0.4400 | 0.6000 |
+| similarity | 4 | Yes | 0.7200 | 0.6133 | 0.4400 | 0.6000 |
+
+**Best config: MMR, k=8, no reranker** — 100% hit rate, 88% recall.
+
+**By difficulty (best config):**
+
+| Difficulty | Hit Rate | MRR | P@K | R@K |
+|------------|----------|-----|-----|-----|
+| simple | 1.0000 | 0.5085 | 0.2875 | 0.8000 |
+| multi_hop | 1.0000 | 0.7310 | 0.3625 | 0.9000 |
+| edge_case | 1.0000 | 0.5250 | 0.5250 | 1.0000 |
+
+**Key findings:**
+
+- **MMR dominates similarity** — consistently higher hit rate across all k values
+- **k=8 is the sweet spot** — k=4 loses recall, k=16 adds noise without improving recall
+- **Reranker improves MRR but not hit rate** — it reorders, doesn't find new docs. Useful when ranking quality matters more than coverage.
+- **Edge cases are easiest** — narrow, specific queries retrieve well. Simple queries are hardest (broad, ambiguous phrasing).
+
+```bash
+# Run full retrieval evaluation (25 queries, 12 configs)
+uv run doc-helper-retrieval-eval
+
+# Quick test with 5 queries
+uv run doc-helper-retrieval-eval --sample 5
+
+# Custom output path
+uv run doc-helper-retrieval-eval --output evaluation/my_results.json
+```
+
+Results saved to `evaluation/retrieval_results.json`.
+
+### RAGAS Evaluation (Generation Quality)
+
+Measures end-to-end answer quality — does the LLM generate good answers from retrieved context?
+
 ```bash
 # Run RAGAS evaluation (uses gold dataset of 30 Q&A pairs)
 uv run python -m doc_helper.evaluation.runner
@@ -255,7 +327,7 @@ src/doc_helper/
 ├── config/           # Pydantic settings (nested, env-file based)
 ├── db/               # SQLite connection, migrations, conversation/task managers
 ├── embeddings/       # BGE-small and BGE-base, factory pattern
-├── evaluation/       # Gold dataset, RAGAS runner
+├── evaluation/       # Retrieval eval (IR metrics), RAGAS runner, gold dataset
 ├── ingestion/        # Crawlers (Tavily, recursive, local), splitters, pipeline
 ├── llm/              # Ollama and OpenRouter, factory pattern
 ├── observability/    # LangFuse, LangSmith, NoOp tracer, factory pattern
