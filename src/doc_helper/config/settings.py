@@ -63,8 +63,10 @@ class DatabaseSettings(BaseModel):
 class JudgeLLMSettings(BaseModel):
     provider: Literal["ollama", "openrouter", "gemini"] | None = None
     model: str | None = None
+    ollama_base_url: str = "http://localhost:11434"
     openrouter_api_key: str | None = None
     gemini_api_key: str | None = None
+    temperature: float = 0.0
 
 
 class AgentSettings(BaseModel):
