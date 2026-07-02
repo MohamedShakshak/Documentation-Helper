@@ -255,6 +255,8 @@ uv run streamlit run src/doc_helper/ui/streamlit_app.py
 
 ## Evaluation
 
+> [View live LangSmith traces](https://smith.langchain.com/public/a64fbcf1-6d1a-4932-b172-2b2c5c0fc964/d) from the generator evaluation run — agent reasoning, tool calls, retrievals, and judge scoring all visible.
+
 ### Retrieval Evaluation
 
 Measures retrieval pipeline quality **before generation** — can the vector store surface the right documents?
