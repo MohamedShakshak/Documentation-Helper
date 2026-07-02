@@ -2,8 +2,6 @@
 
 A production-grade RAG (Retrieval-Augmented Generation) system for technical documentation, built with LangChain, FastAPI, Streamlit, and ChromaDB.
 
-> Designed as a portfolio-grade engineering project — demonstrates RAG architecture, agent middleware, retrieval evaluation, LLM-as-judge evaluation, and production patterns.
-
 ---
 
 ## Architecture
