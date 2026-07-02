@@ -1,24 +1,69 @@
 from langchain_core.language_models import BaseChatModel
+from pydantic import BaseModel, Field
 
 METRIC_NAMES = ["faithfulness", "answer_relevancy", "answer_correctness", "context_utilization"]
 
 
+class JudgeResult(BaseModel):
+    score: float = Field(ge=0.0, le=1.0)
+    reason: str = ""
+
+
 def _parse_score(raw: str) -> dict[str, float | str]:
     import json
+    import re
 
     try:
         parsed = json.loads(raw)
-        score = float(parsed.get("score", 0.0))
-        score = max(0.0, min(1.0, score))
+        score = max(0.0, min(1.0, float(parsed.get("score", 0.0))))
         reason = str(parsed.get("reason", ""))
         return {"score": score, "reason": reason}
     except (json.JSONDecodeError, ValueError, TypeError):
-        return {"score": 0.0, "reason": f"Failed to parse judge response: {raw[:200]}"}
+        pass
+
+    match = re.search(r'\{[^{}]*"score"\s*:\s*[\d.]+[^{}]*\}', raw, re.DOTALL)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            score = max(0.0, min(1.0, float(parsed.get("score", 0.0))))
+            reason = str(parsed.get("reason", ""))
+            return {"score": score, "reason": reason}
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass
+
+    return {"score": 0.0, "reason": f"Failed to parse judge response: {raw[:200]}"}
 
 
-async def _invoke_judge(judge: BaseChatModel, prompt: str) -> str:
+def _result_to_dict(result: object) -> dict[str, float | str]:
+    if isinstance(result, JudgeResult):
+        return {"score": result.score, "reason": result.reason}
+    if isinstance(result, dict):
+        score = max(0.0, min(1.0, float(result.get("score", 0.0))))
+        return {"score": score, "reason": str(result.get("reason", ""))}
+    return _parse_score(str(result))
+
+
+async def _invoke_judge(judge: BaseChatModel, prompt: str) -> dict[str, float | str]:
+    try:
+        structured = judge.with_structured_output(JudgeResult)
+        result = await structured.ainvoke(prompt)
+        return _result_to_dict(result)
+    except Exception:
+        pass
+
     response = await judge.ainvoke(prompt)
-    return response.content if hasattr(response, "content") else str(response)
+    content = response.content if hasattr(response, "content") else str(response)
+
+    if isinstance(content, list):
+        text_parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                text_parts.append(block.get("text", ""))
+            elif isinstance(block, str):
+                text_parts.append(block)
+        content = "\n".join(text_parts) if text_parts else str(content)
+
+    return _parse_score(str(content))
 
 
 async def faithfulness(
@@ -48,8 +93,7 @@ Instructions:
 
 Respond ONLY with JSON: {{"score": <float>, "reason": "<brief explanation>"}}"""
 
-    raw = await _invoke_judge(judge, prompt)
-    return _parse_score(raw)
+    return await _invoke_judge(judge, prompt)
 
 
 async def answer_relevancy(
@@ -72,8 +116,7 @@ Instructions:
 
 Respond ONLY with JSON: {{"score": <float>, "reason": "<brief explanation>"}}"""
 
-    raw = await _invoke_judge(judge, prompt)
-    return _parse_score(raw)
+    return await _invoke_judge(judge, prompt)
 
 
 async def answer_correctness(
@@ -106,8 +149,7 @@ Instructions:
 
 Respond ONLY with JSON: {{"score": <float>, "reason": "<brief explanation>"}}"""
 
-    raw = await _invoke_judge(judge, prompt)
-    return _parse_score(raw)
+    return await _invoke_judge(judge, prompt)
 
 
 async def context_utilization(
@@ -135,8 +177,7 @@ Instructions:
 
 Respond ONLY with JSON: {{"score": <float>, "reason": "<brief explanation>"}}"""
 
-    raw = await _invoke_judge(judge, prompt)
-    return _parse_score(raw)
+    return await _invoke_judge(judge, prompt)
 
 
 def zero_scores() -> dict[str, dict[str, float | str]]:

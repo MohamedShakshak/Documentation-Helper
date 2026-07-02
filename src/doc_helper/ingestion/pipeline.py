@@ -119,7 +119,7 @@ async def run_ingestion(settings: Settings | None = None) -> None:
 @click.option(
     "--crawler",
     default=None,
-    type=click.Choice(["tavily", "recursive", "local"]),
+    type=click.Choice(["tavily", "recursive", "local", "sitemap"]),
     help="Crawler type",
 )
 @click.option(

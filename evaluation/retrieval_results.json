@@ -3,342 +3,342 @@
   "configs": [
     {
       "search_type": "mmr",
-      "search_k": 8,
-      "reranker_enabled": false,
-      "metrics": {
-        "hit_rate": 1.0,
-        "mrr": 0.6007619047619047,
-        "precision_at_k": 0.365,
-        "recall_at_k": 0.88
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 1.0,
-          "mrr": 0.508452380952381,
-          "precision_at_k": 0.2875,
-          "recall_at_k": 0.8
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.7309523809523809,
-          "precision_at_k": 0.3625,
-          "recall_at_k": 0.9
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.525,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "mmr",
-      "search_k": 8,
-      "reranker_enabled": true,
-      "metrics": {
-        "hit_rate": 1.0,
-        "mrr": 0.6920000000000001,
-        "precision_at_k": 0.365,
-        "recall_at_k": 0.88
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 1.0,
-          "mrr": 0.5900000000000001,
-          "precision_at_k": 0.2875,
-          "recall_at_k": 0.8
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.7733333333333333,
-          "precision_at_k": 0.3625,
-          "recall_at_k": 0.9
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.7333333333333333,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "mmr",
       "search_k": 16,
       "reranker_enabled": false,
       "metrics": {
-        "hit_rate": 1.0,
-        "mrr": 0.5939379509379509,
-        "precision_at_k": 0.35,
-        "recall_at_k": 0.88
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 1.0,
-          "mrr": 0.48623376623376624,
-          "precision_at_k": 0.25625,
-          "recall_at_k": 0.8
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.7236111111111111,
-          "precision_at_k": 0.35625,
-          "recall_at_k": 0.9
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.55,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "mmr",
-      "search_k": 16,
-      "reranker_enabled": true,
-      "metrics": {
-        "hit_rate": 1.0,
-        "mrr": 0.6768427128427129,
-        "precision_at_k": 0.35,
-        "recall_at_k": 0.88
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 1.0,
-          "mrr": 0.5787301587301588,
-          "precision_at_k": 0.25625,
-          "recall_at_k": 0.8
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.7433766233766234,
-          "precision_at_k": 0.35625,
-          "recall_at_k": 0.9
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.74,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "similarity",
-      "search_k": 16,
-      "reranker_enabled": false,
-      "metrics": {
-        "hit_rate": 0.96,
-        "mrr": 0.5914102564102565,
-        "precision_at_k": 0.36,
-        "recall_at_k": 0.84
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 0.9,
-          "mrr": 0.481025641025641,
-          "precision_at_k": 0.2375,
-          "recall_at_k": 0.75
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.7224999999999999,
-          "precision_at_k": 0.4,
-          "recall_at_k": 0.85
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.55,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "similarity",
-      "search_k": 16,
-      "reranker_enabled": true,
-      "metrics": {
-        "hit_rate": 0.96,
-        "mrr": 0.7051587301587301,
-        "precision_at_k": 0.36,
-        "recall_at_k": 0.84
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 0.9,
-          "mrr": 0.5267857142857143,
-          "precision_at_k": 0.2375,
-          "recall_at_k": 0.75
-        },
-        "multi_hop": {
-          "hit_rate": 1.0,
-          "mrr": 0.875,
-          "precision_at_k": 0.4,
-          "recall_at_k": 0.85
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.7222222222222222,
-          "precision_at_k": 0.525,
-          "recall_at_k": 1.0
-        }
-      }
-    },
-    {
-      "search_type": "mmr",
-      "search_k": 4,
-      "reranker_enabled": false,
-      "metrics": {
-        "hit_rate": 0.84,
-        "mrr": 0.6,
-        "precision_at_k": 0.36,
+        "hit_rate": 0.88,
+        "mrr": 0.40293795093795093,
+        "precision_at_k": 0.18,
         "recall_at_k": 0.7
       },
       "by_difficulty": {
         "simple": {
-          "hit_rate": 0.9,
-          "mrr": 0.55,
-          "precision_at_k": 0.275,
-          "recall_at_k": 0.7
+          "hit_rate": 0.8,
+          "mrr": 0.3987301587301587,
+          "precision_at_k": 0.13125,
+          "recall_at_k": 0.6
         },
         "multi_hop": {
-          "hit_rate": 0.8,
-          "mrr": 0.7,
-          "precision_at_k": 0.35,
-          "recall_at_k": 0.7
+          "hit_rate": 1.0,
+          "mrr": 0.45766233766233766,
+          "precision_at_k": 0.18125,
+          "recall_at_k": 0.8
         },
         "edge_case": {
           "hit_rate": 0.8,
-          "mrr": 0.5,
-          "precision_at_k": 0.55,
+          "mrr": 0.3019047619047619,
+          "precision_at_k": 0.275,
           "recall_at_k": 0.7
         }
       }
     },
     {
       "search_type": "mmr",
-      "search_k": 4,
+      "search_k": 16,
       "reranker_enabled": true,
       "metrics": {
-        "hit_rate": 0.84,
-        "mrr": 0.6633333333333333,
-        "precision_at_k": 0.36,
+        "hit_rate": 0.88,
+        "mrr": 0.38504517704517705,
+        "precision_at_k": 0.18,
         "recall_at_k": 0.7
       },
       "by_difficulty": {
         "simple": {
-          "hit_rate": 0.9,
-          "mrr": 0.675,
-          "precision_at_k": 0.275,
-          "recall_at_k": 0.7
+          "hit_rate": 0.8,
+          "mrr": 0.3588095238095238,
+          "precision_at_k": 0.13125,
+          "recall_at_k": 0.6
         },
         "multi_hop": {
-          "hit_rate": 0.8,
-          "mrr": 0.6333333333333333,
-          "precision_at_k": 0.35,
-          "recall_at_k": 0.7
+          "hit_rate": 1.0,
+          "mrr": 0.42047008547008546,
+          "precision_at_k": 0.18125,
+          "recall_at_k": 0.8
         },
         "edge_case": {
           "hit_rate": 0.8,
-          "mrr": 0.7,
-          "precision_at_k": 0.55,
+          "mrr": 0.36666666666666664,
+          "precision_at_k": 0.275,
           "recall_at_k": 0.7
         }
       }
     },
     {
       "search_type": "similarity",
-      "search_k": 8,
+      "search_k": 16,
       "reranker_enabled": false,
       "metrics": {
-        "hit_rate": 0.8,
-        "mrr": 0.5763333333333334,
-        "precision_at_k": 0.435,
-        "recall_at_k": 0.72
+        "hit_rate": 0.84,
+        "mrr": 0.40830852480852475,
+        "precision_at_k": 0.1925,
+        "recall_at_k": 0.66
       },
       "by_difficulty": {
         "simple": {
-          "hit_rate": 0.6,
-          "mrr": 0.4533333333333333,
-          "precision_at_k": 0.275,
+          "hit_rate": 0.7,
+          "mrr": 0.38825757575757575,
+          "precision_at_k": 0.11875,
           "recall_at_k": 0.55
         },
         "multi_hop": {
-          "hit_rate": 0.9,
-          "mrr": 0.7125,
-          "precision_at_k": 0.5125,
+          "hit_rate": 1.0,
+          "mrr": 0.46822802197802194,
+          "precision_at_k": 0.2,
           "recall_at_k": 0.8
         },
         "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.32857142857142857,
+          "precision_at_k": 0.325,
+          "recall_at_k": 0.6
+        }
+      }
+    },
+    {
+      "search_type": "similarity",
+      "search_k": 16,
+      "reranker_enabled": true,
+      "metrics": {
+        "hit_rate": 0.84,
+        "mrr": 0.3641904761904762,
+        "precision_at_k": 0.1925,
+        "recall_at_k": 0.66
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.7,
+          "mrr": 0.33166666666666667,
+          "precision_at_k": 0.11875,
+          "recall_at_k": 0.55
+        },
+        "multi_hop": {
           "hit_rate": 1.0,
-          "mrr": 0.55,
-          "precision_at_k": 0.6,
-          "recall_at_k": 0.9
+          "mrr": 0.41047619047619044,
+          "precision_at_k": 0.2,
+          "recall_at_k": 0.8
+        },
+        "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.33666666666666667,
+          "precision_at_k": 0.325,
+          "recall_at_k": 0.6
         }
       }
     },
     {
       "search_type": "similarity",
       "search_k": 8,
-      "reranker_enabled": true,
-      "metrics": {
-        "hit_rate": 0.8,
-        "mrr": 0.6413333333333334,
-        "precision_at_k": 0.435,
-        "recall_at_k": 0.72
-      },
-      "by_difficulty": {
-        "simple": {
-          "hit_rate": 0.6,
-          "mrr": 0.475,
-          "precision_at_k": 0.275,
-          "recall_at_k": 0.55
-        },
-        "multi_hop": {
-          "hit_rate": 0.9,
-          "mrr": 0.775,
-          "precision_at_k": 0.5125,
-          "recall_at_k": 0.8
-        },
-        "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.7066666666666667,
-          "precision_at_k": 0.6,
-          "recall_at_k": 0.9
-        }
-      }
-    },
-    {
-      "search_type": "similarity",
-      "search_k": 4,
       "reranker_enabled": false,
       "metrics": {
         "hit_rate": 0.72,
-        "mrr": 0.5633333333333334,
-        "precision_at_k": 0.44,
-        "recall_at_k": 0.6
+        "mrr": 0.3990952380952381,
+        "precision_at_k": 0.235,
+        "recall_at_k": 0.58
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.6,
+          "mrr": 0.37916666666666665,
+          "precision_at_k": 0.1625,
+          "recall_at_k": 0.5
+        },
+        "multi_hop": {
+          "hit_rate": 0.8,
+          "mrr": 0.4542857142857143,
+          "precision_at_k": 0.2625,
+          "recall_at_k": 0.65
+        },
+        "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.32857142857142857,
+          "precision_at_k": 0.325,
+          "recall_at_k": 0.6
+        }
+      }
+    },
+    {
+      "search_type": "similarity",
+      "search_k": 8,
+      "reranker_enabled": true,
+      "metrics": {
+        "hit_rate": 0.72,
+        "mrr": 0.40976190476190477,
+        "precision_at_k": 0.235,
+        "recall_at_k": 0.58
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.6,
+          "mrr": 0.39583333333333337,
+          "precision_at_k": 0.1625,
+          "recall_at_k": 0.5
+        },
+        "multi_hop": {
+          "hit_rate": 0.8,
+          "mrr": 0.4726190476190476,
+          "precision_at_k": 0.2625,
+          "recall_at_k": 0.65
+        },
+        "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.3119047619047619,
+          "precision_at_k": 0.325,
+          "recall_at_k": 0.6
+        }
+      }
+    },
+    {
+      "search_type": "mmr",
+      "search_k": 8,
+      "reranker_enabled": false,
+      "metrics": {
+        "hit_rate": 0.72,
+        "mrr": 0.4126666666666667,
+        "precision_at_k": 0.18,
+        "recall_at_k": 0.58
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.6,
+          "mrr": 0.38333333333333336,
+          "precision_at_k": 0.1375,
+          "recall_at_k": 0.5
+        },
+        "multi_hop": {
+          "hit_rate": 0.8,
+          "mrr": 0.47000000000000003,
+          "precision_at_k": 0.1875,
+          "recall_at_k": 0.65
+        },
+        "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.35666666666666663,
+          "precision_at_k": 0.25,
+          "recall_at_k": 0.6
+        }
+      }
+    },
+    {
+      "search_type": "mmr",
+      "search_k": 8,
+      "reranker_enabled": true,
+      "metrics": {
+        "hit_rate": 0.72,
+        "mrr": 0.39404761904761904,
+        "precision_at_k": 0.18,
+        "recall_at_k": 0.58
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.6,
+          "mrr": 0.36428571428571427,
+          "precision_at_k": 0.1375,
+          "recall_at_k": 0.5
+        },
+        "multi_hop": {
+          "hit_rate": 0.8,
+          "mrr": 0.4208333333333333,
+          "precision_at_k": 0.1875,
+          "recall_at_k": 0.65
+        },
+        "edge_case": {
+          "hit_rate": 0.8,
+          "mrr": 0.4,
+          "precision_at_k": 0.25,
+          "recall_at_k": 0.6
+        }
+      }
+    },
+    {
+      "search_type": "mmr",
+      "search_k": 4,
+      "reranker_enabled": false,
+      "metrics": {
+        "hit_rate": 0.52,
+        "mrr": 0.38333333333333336,
+        "precision_at_k": 0.19,
+        "recall_at_k": 0.4
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.4,
+          "mrr": 0.35,
+          "precision_at_k": 0.15,
+          "recall_at_k": 0.3
+        },
+        "multi_hop": {
+          "hit_rate": 0.7,
+          "mrr": 0.4583333333333333,
+          "precision_at_k": 0.225,
+          "recall_at_k": 0.55
+        },
+        "edge_case": {
+          "hit_rate": 0.4,
+          "mrr": 0.3,
+          "precision_at_k": 0.2,
+          "recall_at_k": 0.3
+        }
+      }
+    },
+    {
+      "search_type": "mmr",
+      "search_k": 4,
+      "reranker_enabled": true,
+      "metrics": {
+        "hit_rate": 0.52,
+        "mrr": 0.35333333333333333,
+        "precision_at_k": 0.19,
+        "recall_at_k": 0.4
+      },
+      "by_difficulty": {
+        "simple": {
+          "hit_rate": 0.4,
+          "mrr": 0.3,
+          "precision_at_k": 0.15,
+          "recall_at_k": 0.3
+        },
+        "multi_hop": {
+          "hit_rate": 0.7,
+          "mrr": 0.4333333333333333,
+          "precision_at_k": 0.225,
+          "recall_at_k": 0.55
+        },
+        "edge_case": {
+          "hit_rate": 0.4,
+          "mrr": 0.3,
+          "precision_at_k": 0.2,
+          "recall_at_k": 0.3
+        }
+      }
+    },
+    {
+      "search_type": "similarity",
+      "search_k": 4,
+      "reranker_enabled": false,
+      "metrics": {
+        "hit_rate": 0.48,
+        "mrr": 0.36,
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.4
       },
       "by_difficulty": {
         "simple": {
           "hit_rate": 0.5,
-          "mrr": 0.4333333333333333,
-          "precision_at_k": 0.275,
-          "recall_at_k": 0.45
+          "mrr": 0.36666666666666664,
+          "precision_at_k": 0.15,
+          "recall_at_k": 0.4
         },
         "multi_hop": {
-          "hit_rate": 0.8,
-          "mrr": 0.7,
-          "precision_at_k": 0.525,
-          "recall_at_k": 0.65
+          "hit_rate": 0.5,
+          "mrr": 0.4,
+          "precision_at_k": 0.225,
+          "recall_at_k": 0.4
         },
         "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.55,
-          "precision_at_k": 0.6,
-          "recall_at_k": 0.8
+          "hit_rate": 0.4,
+          "mrr": 0.26666666666666666,
+          "precision_at_k": 0.25,
+          "recall_at_k": 0.4
         }
       }
     },
@@ -347,38 +347,38 @@
       "search_k": 4,
       "reranker_enabled": true,
       "metrics": {
-        "hit_rate": 0.72,
-        "mrr": 0.6133333333333334,
-        "precision_at_k": 0.44,
-        "recall_at_k": 0.6
+        "hit_rate": 0.48,
+        "mrr": 0.36333333333333334,
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.4
       },
       "by_difficulty": {
         "simple": {
           "hit_rate": 0.5,
           "mrr": 0.4,
-          "precision_at_k": 0.275,
-          "recall_at_k": 0.45
+          "precision_at_k": 0.15,
+          "recall_at_k": 0.4
         },
         "multi_hop": {
-          "hit_rate": 0.8,
-          "mrr": 0.75,
-          "precision_at_k": 0.525,
-          "recall_at_k": 0.65
+          "hit_rate": 0.5,
+          "mrr": 0.38333333333333336,
+          "precision_at_k": 0.225,
+          "recall_at_k": 0.4
         },
         "edge_case": {
-          "hit_rate": 1.0,
-          "mrr": 0.7666666666666667,
-          "precision_at_k": 0.6,
-          "recall_at_k": 0.8
+          "hit_rate": 0.4,
+          "mrr": 0.25,
+          "precision_at_k": 0.25,
+          "recall_at_k": 0.4
         }
       }
     }
   ],
   "best_config": {
     "search_type": "mmr",
-    "search_k": 8,
+    "search_k": 16,
     "reranker_enabled": false,
     "metric": "hit_rate",
-    "value": 1.0
+    "value": 0.88
   }
 }

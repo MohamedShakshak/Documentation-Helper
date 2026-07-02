@@ -64,9 +64,9 @@ class TestRetrievalSettings:
     def test_defaults(self):
         settings = RetrievalSettings()
         assert settings.search_type == "mmr"
-        assert settings.search_k == 8
+        assert settings.search_k == 16
         assert settings.score_threshold == 0.5
-        assert settings.reranker_enabled is True
+        assert settings.reranker_enabled is False
 
 
 class TestIngestionSettings:

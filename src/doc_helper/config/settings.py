@@ -27,15 +27,15 @@ class VectorStoreSettings(BaseModel):
 
 class RetrievalSettings(BaseModel):
     search_type: Literal["similarity", "mmr", "similarity_score_threshold"] = "mmr"
-    search_k: int = 8
+    search_k: int = 16
     score_threshold: float = 0.5
-    reranker_enabled: bool = True
+    reranker_enabled: bool = False
 
 
 class IngestionSettings(BaseModel):
-    crawler: Literal["tavily", "recursive", "local"] = "tavily"
+    crawler: Literal["tavily", "recursive", "local", "sitemap"] = "tavily"
     tavily_api_key: str | None = None
-    crawl_url: str = "https://python.langchain.com/docs/"
+    crawl_url: str = "https://docs.langchain.com/oss/python/langchain"
     crawl_depth: int = 2
     crawl_prevent_outside: bool = True
     crawl_timeout: int = 10
@@ -61,8 +61,8 @@ class DatabaseSettings(BaseModel):
 
 
 class JudgeLLMSettings(BaseModel):
-    provider: Literal["ollama", "openrouter", "gemini"] | None = None
-    model: str | None = None
+    provider: Literal["ollama", "openrouter", "gemini"] | None = "gemini"
+    model: str | None = "gemma-4-31b-it"
     ollama_base_url: str = "http://localhost:11434"
     openrouter_api_key: str | None = None
     gemini_api_key: str | None = None

@@ -1,8 +1,8 @@
 # Documentation Helper
 
-A production-grade RAG (Retrieval-Augmented Generation) system for technical documentation, built with LangChain, FastAPI, Streamlit, and friends.
+A production-grade RAG (Retrieval-Augmented Generation) system for technical documentation, built with LangChain, FastAPI, Streamlit, and ChromaDB.
 
-> Built for the AI/LLM Engineer portfolio — focuses on RAG patterns, agent middleware, evaluation, prompt engineering, and production-grade architecture.
+> Designed as a portfolio-grade engineering project — demonstrates RAG architecture, agent middleware, retrieval evaluation, LLM-as-judge evaluation, and production patterns.
 
 ---
 
@@ -13,28 +13,28 @@ A production-grade RAG (Retrieval-Augmented Generation) system for technical doc
 │  Streamlit  │────▶│   FastAPI    │────▶│       RAG Agent             │
 │  (UI)       │     │   (API)      │     │  ┌───────────────────────┐  │
 └─────────────┘     └──────────────┘     │  │  Guardrails (input)   │  │
-                                           │  │  Summarization        │  │
-                    ┌──────────────┐     │  │  Tool Retry            │  │
-                    │  Ingestion   │     │  │  Model Fallback        │  │
-                    │  Pipeline    │     │  └───────────────────────┘  │
-                    │  (CLI/API)   │     │  ┌───────────────────────┐  │
-                    └──────┬───────┘     │  │  retrieve_context     │  │
-                           │              │  │  web_search (Tavily) │  │
-                           ▼              │  │  check_links (httpx) │  │
-                    ┌──────────────┐     │  └───────────────────────┘  │
-                    │  Vector Store│     └─────────────────────────────┘
-                    │  (Chroma)    │              │
-                    └──────────────┘              ▼
-                                          ┌──────────────┐
-                                          │  Telemetry   │
-                                          │  LangFuse/   │
-                                          │  LangSmith   │
-                                          └──────────────┘
+                                          │  │  Summarization        │  │
+                     ┌──────────────┐     │  │  Tool Retry            │  │
+                     │  Ingestion   │     │  │  Model Fallback        │  │
+                     │  Pipeline    │     │  └───────────────────────┘  │
+                     │  (CLI/API)   │     │  ┌───────────────────────┐  │
+                     └──────┬───────┘     │  │  retrieve_context     │  │
+                            │              │  │  web_search (Tavily)  │  │
+                            ▼              │  │  check_links (httpx)  │  │
+                     ┌──────────────┐     │  └───────────────────────┘  │
+                     │  Vector Store│     └─────────────────────────────┘
+                     │  (Chroma)    │              │
+                     └──────────────┘              ▼
+                                           ┌──────────────┐
+                                           │  Telemetry   │
+                                           │  LangSmith / │
+                                           │  LangFuse    │
+                                           └──────────────┘
 ```
 
 ### Layered Metadata Envelope
 
-Every chunk carries this metadata:
+Every chunk stored in the vector store carries rich metadata for filtering, deduplication, and traceability:
 
 | Field | Source | Description |
 |-------|--------|-------------|
@@ -53,19 +53,29 @@ Every chunk carries this metadata:
 
 ## Features
 
-- **Zero API keys by default** — runs entirely local with Ollama + BGE embeddings + Chroma
-- **Cloud LLMs** — OpenRouter support for GPT-4o, Claude, etc.
+### Core RAG
+- **Zero-config startup** — runs entirely local with Ollama, BGE embeddings, and ChromaDB. No API keys required.
+- **Multi-provider LLMs** — Ollama (local), OpenRouter (cloud), Google Gemini
 - **Multi-tool agent** — `retrieve_context`, `web_search` (Tavily), `check_links` (HTTP HEAD)
-- **Agent middleware** — Guardrails (input validation), summarization (context compression), tool retry, model fallback
-- **Markdown-aware chunking** — Two-stage splitter (header hierarchy → recursive character)
+- **Agent middleware** — Guardrails, summarization, tool retry, model fallback (composable chain)
+- **SSE streaming** — Typed server-sent events for real-time agent thought streaming
+- **Conversation persistence** — SQLite with WAL mode, full CRUD for conversations and messages
+
+### Ingestion
+- **Sitemap crawler** — Discovers documentation URLs via `sitemap.xml`, fetches clean `.md` content
+- **Tavily crawler** — AI-powered web search for ad-hoc ingestion
+- **Recursive crawler** — LangChain `RecursiveUrlLoader` for legacy sites
+- **Local file crawler** — Ingest markdown files from a local directory
+- **Markdown-aware chunking** — Two-stage splitter (header hierarchy → recursive character) with section metadata
 - **Deduplication** — SHA-256 content hashing skips duplicate chunks on re-ingestion
-- **SSE streaming** — Typed server-sent events (`agent_thought`, `tool_call`, `tool_result`, `answer`, `done`, `error`)
-- **Conversation persistence** — SQLite with CRUD for conversations and messages
-- **Observability** — LangFuse (default) and LangSmith tracing (factory pattern, NoOp when disabled)
-- **Retrieval evaluation** — 25-query URL-labeled dataset, 12-config sweep (search type × k × reranker), IR metrics (hit rate, MRR, precision@k, recall@k)
-- **RAGAS evaluation** — 30 Q&A gold dataset (3 difficulty levels), CLI runner, OpenRouter judge
-- **Ingestion pipeline** — Tavily, recursive URL, and local file crawlers; CLI and async API
-- **Docker** — Multi-profile compose (dev/full/production)
+
+### Evaluation
+- **Retrieval evaluation** — 25-query dataset, 12-config sweep (search type × k × reranker), IR metrics
+- **Generator evaluation** — 29-query dataset with reference answers and key facts, 4 LLM-as-judge metrics via structured output (Pydantic-validated)
+
+### Production
+- **Observability** — LangSmith and LangFuse tracing (factory pattern, NoOp when disabled)
+- **Docker** — Multi-profile compose (dev / full / production)
 
 ---
 
@@ -75,7 +85,7 @@ Every chunk carries this metadata:
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager
-- [Ollama](https://ollama.ai/) with a model (e.g., `ollama pull qwen3.5:9b`)
+- [Ollama](https://ollama.ai/) with a model pulled (e.g., `ollama pull qwen3.5:9b`)
 
 ### Setup
 
@@ -83,12 +93,15 @@ Every chunk carries this metadata:
 git clone https://github.com/MohamedShakshak/Documentation-Helper.git
 cd Documentation-Helper
 
-# Create venv and install deps
+# Install dependencies
 uv sync
 
 # Copy and configure environment
 cp .env.example .env
-# Edit .env as needed (defaults work locally with Ollama)
+# Edit .env as needed — defaults work locally with Ollama
+
+# Ingest documentation (sitemap crawler fetches 64 LangChain pages)
+uv run doc-helper-ingest --crawler sitemap
 
 # Run the API server
 uv run uvicorn doc_helper.api.app:app --reload
@@ -100,13 +113,19 @@ uv run streamlit run src/doc_helper/ui/streamlit_app.py
 ### Ingest Documentation
 
 ```bash
-# Via CLI
-uv run python -m doc_helper.ingestion.pipeline --crawler recursive --url https://python.langchain.com/ --depth 1
+# Sitemap crawler (recommended for docs.langchain.com)
+uv run doc-helper-ingest --crawler sitemap
+
+# Tavily crawler (requires TAVILY_API_KEY)
+uv run doc-helper-ingest --crawler tavily --url https://docs.langchain.com/oss/python/langchain
+
+# Local files
+uv run doc-helper-ingest --crawler local
 
 # Via API
 curl -X POST http://localhost:8000/api/ingest \
   -H "Content-Type: application/json" \
-  -d '{"crawler": "recursive", "url": "https://python.langchain.com/", "depth": 1}'
+  -d '{"crawler": "sitemap"}'
 ```
 
 ### Chat
@@ -133,13 +152,32 @@ All configuration is via environment variables or `.env` file. Nested variables 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM__PROVIDER` | `ollama` | LLM provider (`ollama` or `openrouter`) |
+| `LLM__PROVIDER` | `ollama` | LLM provider (`ollama`, `openrouter`, `gemini`) |
 | `LLM__MODEL` | `qwen3.5:9b` | Model name |
 | `LLM__OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
 | `LLM__OPENROUTER_API_KEY` | — | Required for OpenRouter |
+| `LLM__GEMINI_API_KEY` | — | Required for Gemini |
 | `EMBEDDING__MODEL` | `bge-small` | Embedding model (`bge-small` or `bge-base`) |
-| `INGESTION__CRAWLER` | `tavily` | Default crawler type |
+| `INGESTION__CRAWLER` | `tavily` | Default crawler (`tavily`, `recursive`, `local`, `sitemap`) |
+| `INGESTION__CRAWL_URL` | `https://docs.langchain.com/oss/python/langchain` | Base URL for sitemap/recursive crawlers |
 | `VECTOR_STORE__PROVIDER` | `chroma` | Vector store (`chroma` or `pinecone`) |
+
+### Retrieval
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RETRIEVAL__SEARCH_TYPE` | `mmr` | Search type (`similarity`, `mmr`, `similarity_score_threshold`) |
+| `RETRIEVAL__SEARCH_K` | `16` | Number of documents to retrieve |
+| `RETRIEVAL__SCORE_THRESHOLD` | `0.5` | Minimum similarity score (for `similarity_score_threshold`) |
+| `RETRIEVAL__RERANKER_ENABLED` | `false` | Enable FlashRank cross-encoder reranker |
+
+### Judge LLM (Evaluation)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JUDGE_LLM__PROVIDER` | — | Judge provider (falls back to `LLM__PROVIDER` if unset) |
+| `JUDGE_LLM__MODEL` | — | Judge model (falls back to `LLM__MODEL` if unset) |
+| `JUDGE_LLM__TEMPERATURE` | `0.0` | Judge temperature (0 for deterministic scoring) |
 
 ### Agent Middleware
 
@@ -148,8 +186,8 @@ All configuration is via environment variables or `.env` file. Nested variables 
 | `AGENT__GUARDRAILS_ENABLED` | `true` | Enable input validation |
 | `AGENT__GUARDRAILS_MAX_INPUT_LENGTH` | `2000` | Max input characters |
 | `AGENT__SUMMARIZATION_ENABLED` | `true` | Enable conversation summarization |
-| `AGENT__SUMMARIZATION_THRESHOLD` | `20` | Messages before summarization |
-| `AGENT__MODEL_FALLBACK_ENABLED` | `true` | Enable model fallback |
+| `AGENT__SUMMARIZATION_THRESHOLD` | `20` | Messages before summarization triggers |
+| `AGENT__MODEL_FALLBACK_ENABLED` | `true` | Enable model fallback on failure |
 | `AGENT__FALLBACK_MODEL` | — | Fallback model name |
 | `AGENT__MAX_TOOL_RETRIES` | `2` | Tool retry count |
 
@@ -161,6 +199,8 @@ All configuration is via environment variables or `.env` file. Nested variables 
 | `OBSERVABILITY__PROVIDER` | `langfuse` | Tracer provider (`langfuse` or `langsmith`) |
 | `OBSERVABILITY__LANGFUSE_PUBLIC_KEY` | — | LangFuse public key |
 | `OBSERVABILITY__LANGFUSE_SECRET_KEY` | — | LangFuse secret key |
+| `OBSERVABILITY__LANGSMITH_API_KEY` | — | LangSmith API key |
+| `OBSERVABILITY__LANGSMITH_PROJECT` | `documentation-helper` | LangSmith project name |
 
 See `.env.example` for the full list.
 
@@ -170,7 +210,7 @@ See `.env.example` for the full list.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/health` | Health check with config |
+| `GET` | `/api/health` | Health check with config summary |
 | `POST` | `/api/chat` | Sync chat (returns answer + sources) |
 | `POST` | `/api/chat/stream` | SSE streaming chat |
 | `POST` | `/api/chat/conversations` | Create conversation |
@@ -198,13 +238,13 @@ See `.env.example` for the full list.
 
 ```bash
 # Ingest documentation
-uv run python -m doc_helper.ingestion.pipeline --url <URL> --depth 2 --crawler recursive
+uv run doc-helper-ingest --crawler sitemap
 
-# Run retrieval evaluation (12-config sweep)
+# Run retrieval evaluation (12-config sweep, 25 queries)
 uv run doc-helper-retrieval-eval
 
-# Run RAGAS evaluation
-uv run python -m doc_helper.evaluation.runner --sample 10
+# Run generator evaluation (29 queries, 4 LLM-as-judge metrics)
+uv run doc-helper-evaluate
 
 # Start API server
 uv run uvicorn doc_helper.api.app:app
@@ -215,28 +255,13 @@ uv run streamlit run src/doc_helper/ui/streamlit_app.py
 
 ---
 
-## Docker
-
-```bash
-# Dev profile (API only)
-docker compose --profile dev up
-
-# Full stack (API + Streamlit + LangFuse + Postgres)
-docker compose --profile full up
-
-# Production (API only with external deps)
-docker compose --profile production up
-```
-
----
-
 ## Evaluation
 
 ### Retrieval Evaluation
 
-Measures the retrieval pipeline quality **before generation** — can the vector store surface the right documents?
+Measures retrieval pipeline quality **before generation** — can the vector store surface the right documents?
 
-**Dataset:** 25 queries across 3 difficulty levels (simple, multi_hop, edge_case), labeled with relevant source URLs.
+**Dataset:** 25 queries across 3 difficulty levels (simple, multi_hop, edge_case), each labeled with relevant source URLs.
 
 **Config sweep:** 2 search types × 3 k values × 2 reranker states = 12 configurations.
 
@@ -244,44 +269,44 @@ Measures the retrieval pipeline quality **before generation** — can the vector
 
 | Metric | What it measures |
 |--------|-----------------|
-| **Hit Rate** | Fraction of queries with ≥1 relevant doc in top-k |
+| **Hit Rate** | Fraction of queries with at least one relevant doc in top-k |
 | **MRR** (Mean Reciprocal Rank) | How high the first relevant doc ranks |
 | **Precision@k** | Fraction of retrieved docs that are relevant |
 | **Recall@k** | Fraction of relevant docs that were retrieved |
 
-**Full results (25 queries, BGE-base embeddings, 899 chunks):**
+**Full results (25 queries, BGE-base embeddings, 2,356 chunks across 64 pages):**
 
 | Search Type | k | Reranker | Hit Rate | MRR | P@K | R@K |
 |-------------|---|----------|----------|-----|-----|-----|
-| **mmr** | **8** | **No** | **1.0000** | **0.6008** | **0.3650** | **0.8800** |
-| mmr | 8 | Yes | 1.0000 | 0.6920 | 0.3650 | 0.8800 |
-| mmr | 16 | No | 1.0000 | 0.5939 | 0.3500 | 0.8800 |
-| mmr | 16 | Yes | 1.0000 | 0.6768 | 0.3500 | 0.8800 |
-| similarity | 16 | No | 0.9600 | 0.5914 | 0.3600 | 0.8400 |
-| similarity | 16 | Yes | 0.9600 | 0.7052 | 0.3600 | 0.8400 |
-| mmr | 4 | No | 0.8400 | 0.6000 | 0.3600 | 0.7000 |
-| mmr | 4 | Yes | 0.8400 | 0.6633 | 0.3600 | 0.7000 |
-| similarity | 8 | No | 0.8000 | 0.5763 | 0.4350 | 0.7200 |
-| similarity | 8 | Yes | 0.8000 | 0.6413 | 0.4350 | 0.7200 |
-| similarity | 4 | No | 0.7200 | 0.5633 | 0.4400 | 0.6000 |
-| similarity | 4 | Yes | 0.7200 | 0.6133 | 0.4400 | 0.6000 |
+| **mmr** | **16** | **No** | **0.8800** | **0.4029** | **0.1800** | **0.7000** |
+| mmr | 16 | Yes | 0.8800 | 0.3850 | 0.1800 | 0.7000 |
+| similarity | 16 | No | 0.8400 | 0.4083 | 0.1925 | 0.6600 |
+| similarity | 16 | Yes | 0.8400 | 0.3642 | 0.1925 | 0.6600 |
+| similarity | 8 | No | 0.7200 | 0.3991 | 0.2350 | 0.5800 |
+| similarity | 8 | Yes | 0.7200 | 0.4098 | 0.2350 | 0.5800 |
+| mmr | 8 | No | 0.7200 | 0.4127 | 0.1800 | 0.5800 |
+| mmr | 8 | Yes | 0.7200 | 0.3940 | 0.1800 | 0.5800 |
+| mmr | 4 | No | 0.5200 | 0.3833 | 0.1900 | 0.4000 |
+| mmr | 4 | Yes | 0.5200 | 0.3533 | 0.1900 | 0.4000 |
+| similarity | 4 | No | 0.4800 | 0.3600 | 0.2000 | 0.4000 |
+| similarity | 4 | Yes | 0.4800 | 0.3633 | 0.2000 | 0.4000 |
 
-**Best config: MMR, k=8, no reranker** — 100% hit rate, 88% recall.
+**Best config: MMR, k=16, no reranker** — 88% hit rate, 70% recall.
 
 **By difficulty (best config):**
 
 | Difficulty | Hit Rate | MRR | P@K | R@K |
 |------------|----------|-----|-----|-----|
-| simple | 1.0000 | 0.5085 | 0.2875 | 0.8000 |
-| multi_hop | 1.0000 | 0.7310 | 0.3625 | 0.9000 |
-| edge_case | 1.0000 | 0.5250 | 0.5250 | 1.0000 |
+| simple | 0.8000 | 0.3987 | 0.1313 | 0.6000 |
+| multi_hop | 1.0000 | 0.4577 | 0.1812 | 0.8000 |
+| edge_case | 0.8000 | 0.3019 | 0.2750 | 0.7000 |
 
 **Key findings:**
 
-- **MMR dominates similarity** — consistently higher hit rate across all k values
-- **k=8 is the sweet spot** — k=4 loses recall, k=16 adds noise without improving recall
-- **Reranker improves MRR but not hit rate** — it reorders, doesn't find new docs. Useful when ranking quality matters more than coverage.
-- **Edge cases are easiest** — narrow, specific queries retrieve well. Simple queries are hardest (broad, ambiguous phrasing).
+- **MMR dominates similarity** — consistently higher hit rate across all k values, especially at k=16
+- **k=16 is the sweet spot** — k=4 loses too much recall, k=8 misses relevant docs in the larger store
+- **Reranker does not improve hit rate** — it reorders results but cannot find new documents. Slightly hurts MMR by disturbing the diversity ordering.
+- **Multi-hop queries retrieve best** — specific, multi-concept queries surface relevant docs effectively
 
 ```bash
 # Run full retrieval evaluation (25 queries, 12 configs)
@@ -296,25 +321,61 @@ uv run doc-helper-retrieval-eval --output evaluation/my_results.json
 
 Results saved to `evaluation/retrieval_results.json`.
 
-### RAGAS Evaluation (Generation Quality)
+---
 
-Measures end-to-end answer quality — does the LLM generate good answers from retrieved context?
+### Generator Evaluation
+
+Measures end-to-end answer quality — does the RAG agent generate faithful, correct answers from retrieved context?
+
+**Dataset:** 29 queries across 3 difficulty levels, each with a reference answer, key facts, and relevant URLs.
+
+**Judge:** LLM-as-judge using structured output (Pydantic-validated responses via `with_structured_output`). Runs 4 metrics in parallel per query.
+
+**Metrics:**
+
+| Metric | What it measures |
+|--------|-----------------|
+| **Faithfulness** | Is the answer grounded in retrieved context? (no hallucination) |
+| **Answer Relevancy** | Does the answer directly address the question? |
+| **Answer Correctness** | Does the answer match reference answer and key facts? |
+| **Context Utilization** | Does the answer use retrieved context or rely on training data? |
+
+**Results (29 queries, judge: Gemini/gemma-4-31b-it):**
+
+| Metric | Score |
+|--------|-------|
+| Faithfulness | 0.69 |
+| Answer Relevancy | 1.00 |
+| Answer Correctness | 0.76 |
+| Context Utilization | 0.71 |
+
+**By difficulty:**
+
+| Difficulty | Faithfulness | Relevancy | Correctness | Utilization |
+|------------|-------------|-----------|-------------|-------------|
+| simple | 0.50 | 1.00 | 0.82 | 0.53 |
+| multi_hop | 0.73 | 1.00 | 0.82 | 0.76 |
+| edge_case | 0.88 | 1.00 | 0.59 | 0.88 |
+
+**Key findings:**
+
+- **Answer relevancy is perfect** — the agent always addresses the question asked
+- **Edge cases score highest on faithfulness** — specific queries retrieve precise context, reducing hallucination
+- **Simple queries score lowest** — broad queries (e.g., "What is LCEL?") reference concepts absent from the new docs.langchain.com, causing the agent to hallucinate from training data
+- **Context utilization tracks faithfulness** — when relevant context is retrieved, the agent uses it
 
 ```bash
-# Run RAGAS evaluation (uses gold dataset of 30 Q&A pairs)
-uv run python -m doc_helper.evaluation.runner
+# Run full generator evaluation (29 queries, 4 metrics)
+uv run doc-helper-evaluate
 
-# Limit to 5 questions for quick test
-uv run python -m doc_helper.evaluation.runner --sample 5
+# Quick test with 5 queries
+uv run doc-helper-evaluate --sample 5
+
+# Custom output path
+uv run doc-helper-evaluate --output evaluation/my_results.json
 ```
 
-Metrics measured:
-- **Faithfulness** — Is the answer grounded in the context?
-- **Answer Relevancy** — How relevant is the answer to the question?
-- **Context Precision** — Are retrieved documents truly relevant?
-- **Context Recall** — Are all needed documents retrieved?
-
-Results saved to `evaluation/results.json`.
+Results saved to `evaluation/generator_results.json`.
 
 ---
 
@@ -327,17 +388,18 @@ src/doc_helper/
 ├── config/           # Pydantic settings (nested, env-file based)
 ├── db/               # SQLite connection, migrations, conversation/task managers
 ├── embeddings/       # BGE-small and BGE-base, factory pattern
-├── evaluation/       # Retrieval eval (IR metrics), RAGAS runner, gold dataset
-├── ingestion/        # Crawlers (Tavily, recursive, local), splitters, pipeline
-├── llm/              # Ollama and OpenRouter, factory pattern
-├── observability/    # LangFuse, LangSmith, NoOp tracer, factory pattern
-├── retrieval/        # Retriever with similarity/MMR/score-threshold + reranker
-├── stores/           # Chroma and Pinecone vector stores, factory pattern
+├── evaluation/       # Retrieval eval (IR metrics), generator eval (LLM-as-judge), datasets
+├── ingestion/        # Crawlers (sitemap, Tavily, recursive, local), splitters, pipeline
+├── llm/              # Ollama, OpenRouter, Gemini — factory pattern
+├── observability/    # LangFuse, LangSmith, NoOp tracer — factory pattern
+├── retrieval/        # Retriever with similarity/MMR/score-threshold + FlashRank reranker
+├── stores/           # Chroma and Pinecone vector stores — factory pattern
 ├── ui/               # Streamlit frontend (thin client calling API)
+├── utils.py          # Title extraction helpers
 └── logger.py         # Structured logging helpers
 
 tests/
-├── unit/             # 100+ unit tests
+├── unit/             # 234 unit tests (mocked, fast)
 └── integration/      # API integration tests with TestClient
 ```
 
@@ -347,17 +409,18 @@ tests/
 
 | Category | Technologies |
 |----------|-------------|
-| **LLM** | Ollama (local), OpenRouter (cloud) |
+| **LLM** | Ollama (local), OpenRouter (cloud), Google Gemini |
 | **Embeddings** | BGE-small (384d), BGE-base (768d) via sentence-transformers |
-| **Vector Store** | Chroma (default), Pinecone |
-| **Framework** | LangChain, LangGraph (via `create_agent`) |
+| **Vector Store** | ChromaDB (default), Pinecone |
+| **Framework** | LangChain, `create_agent` with composable middleware |
 | **API** | FastAPI, SSE via sse-starlette |
 | **Frontend** | Streamlit (thin client) |
 | **Database** | SQLite (WAL mode), aiosqlite |
-| **Observability** | LangFuse (default), LangSmith |
-| **Evaluation** | RAGAS (faithfulness, relevancy, precision, recall) |
+| **Observability** | LangSmith, LangFuse |
+| **Evaluation** | Custom LLM-as-judge with Pydantic structured output, IR metrics (no RAGAS dependency) |
 | **Search** | Similarity, MMR, score-threshold, FlashRank reranker |
-| **Package** | `uv`, `hatchling` |
+| **Ingestion** | Sitemap crawler, Tavily, recursive URL, local file |
+| **Package** | `uv`, `hatchling` (src layout) |
 
 ---
 
