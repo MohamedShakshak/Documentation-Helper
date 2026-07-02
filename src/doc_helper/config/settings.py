@@ -1,9 +1,10 @@
 from typing import Literal
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class LLMSettings(BaseSettings):
+class LLMSettings(BaseModel):
     provider: Literal["ollama", "openrouter", "gemini"] = "ollama"
     model: str = "qwen3.5:9b"
     ollama_base_url: str = "http://localhost:11434"
@@ -11,35 +12,27 @@ class LLMSettings(BaseSettings):
     gemini_api_key: str | None = None
     temperature: float = 0.0
 
-    model_config = SettingsConfigDict(env_prefix="LLM__")
 
-
-class EmbeddingSettings(BaseSettings):
+class EmbeddingSettings(BaseModel):
     model: Literal["bge-small", "bge-base"] = "bge-small"
     normalize: bool = True
 
-    model_config = SettingsConfigDict(env_prefix="EMBEDDING__")
 
-
-class VectorStoreSettings(BaseSettings):
+class VectorStoreSettings(BaseModel):
     provider: Literal["chroma", "pinecone"] = "chroma"
     chroma_persist_dir: str = "./chroma_db"
     pinecone_api_key: str | None = None
     pinecone_index_name: str = "langchain-docs"
 
-    model_config = SettingsConfigDict(env_prefix="VECTOR_STORE__")
 
-
-class RetrievalSettings(BaseSettings):
+class RetrievalSettings(BaseModel):
     search_type: Literal["similarity", "mmr", "similarity_score_threshold"] = "similarity"
     search_k: int = 4
     score_threshold: float = 0.5
     reranker_enabled: bool = False
 
-    model_config = SettingsConfigDict(env_prefix="RETRIEVAL__")
 
-
-class IngestionSettings(BaseSettings):
+class IngestionSettings(BaseModel):
     crawler: Literal["tavily", "recursive", "local"] = "tavily"
     tavily_api_key: str | None = None
     crawl_url: str = "https://python.langchain.com/docs/"
@@ -52,10 +45,8 @@ class IngestionSettings(BaseSettings):
     chunk_overlap: int = 150
     batch_size: int = 500
 
-    model_config = SettingsConfigDict(env_prefix="INGESTION__")
 
-
-class ObservabilitySettings(BaseSettings):
+class ObservabilitySettings(BaseModel):
     enabled: bool = False
     provider: Literal["langfuse", "langsmith"] = "langfuse"
     langfuse_public_key: str | None = None
@@ -64,25 +55,19 @@ class ObservabilitySettings(BaseSettings):
     langsmith_api_key: str | None = None
     langsmith_project: str = "documentation-helper"
 
-    model_config = SettingsConfigDict(env_prefix="OBSERVABILITY__")
 
-
-class DatabaseSettings(BaseSettings):
+class DatabaseSettings(BaseModel):
     url: str = "sqlite:///./data/doc_helper.db"
 
-    model_config = SettingsConfigDict(env_prefix="DATABASE__")
 
-
-class JudgeLLMSettings(BaseSettings):
+class JudgeLLMSettings(BaseModel):
     provider: Literal["ollama", "openrouter", "gemini"] | None = None
     model: str | None = None
     openrouter_api_key: str | None = None
     gemini_api_key: str | None = None
 
-    model_config = SettingsConfigDict(env_prefix="JUDGE_LLM__")
 
-
-class AgentSettings(BaseSettings):
+class AgentSettings(BaseModel):
     max_tool_retries: int = 2
     guardrails_enabled: bool = True
     guardrails_max_input_length: int = 2000
@@ -90,8 +75,6 @@ class AgentSettings(BaseSettings):
     summarization_threshold: int = 20
     model_fallback_enabled: bool = True
     fallback_model: str | None = None
-
-    model_config = SettingsConfigDict(env_prefix="AGENT__")
 
 
 class Settings(BaseSettings):

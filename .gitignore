@@ -47,5 +47,10 @@ uv.lock
 # Logs
 *.log
 
+# Cache
+.mypy_cache/
+.ruff_cache/
+.flashrank_cache/
+
 # Local-only architecture doc
 PLAN.md

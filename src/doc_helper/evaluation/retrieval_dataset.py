@@ -4,7 +4,7 @@ from pathlib import Path
 DATASET_PATH = Path(__file__).parent / "retrieval_dataset.json"
 
 
-def load_retrieval_dataset() -> list[dict]:
+def load_retrieval_dataset() -> list[dict[str, object]]:
     with open(DATASET_PATH, encoding="utf-8") as f:
         dataset = json.load(f)
 
@@ -27,6 +27,6 @@ def load_retrieval_dataset() -> list[dict]:
     return dataset
 
 
-def get_retrieval_questions_by_difficulty(difficulty: str) -> list[dict]:
+def get_retrieval_questions_by_difficulty(difficulty: str) -> list[dict[str, object]]:
     dataset = load_retrieval_dataset()
     return [item for item in dataset if item.get("difficulty") == difficulty]

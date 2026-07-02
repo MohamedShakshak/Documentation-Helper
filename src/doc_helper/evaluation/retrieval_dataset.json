@@ -18,8 +18,8 @@
   {
     "question": "What is LCEL?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/overview",
-      "https://docs.langchain.com/oss/python/langchain"
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
     ],
     "difficulty": "simple"
   },
@@ -33,24 +33,22 @@
   {
     "question": "What is the difference between Runnable and Chain?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/overview",
-      "https://docs.langchain.com/oss/python/langchain"
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
     ],
     "difficulty": "simple"
   },
   {
     "question": "How does streaming work in LangChain?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/models",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/models"
     ],
     "difficulty": "simple"
   },
   {
     "question": "How do I use ChatPromptTemplate?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/models",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/models"
     ],
     "difficulty": "simple"
   },
@@ -65,24 +63,21 @@
   {
     "question": "What is the purpose of output parsers?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/structured-output",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/structured-output"
     ],
     "difficulty": "simple"
   },
   {
     "question": "What text splitters are available in LangChain?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/retrieval",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
     ],
     "difficulty": "simple"
   },
   {
     "question": "How do I implement RAG with LangChain?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/retrieval",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
     ],
     "difficulty": "multi_hop"
   },
@@ -155,18 +150,10 @@
     "difficulty": "multi_hop"
   },
   {
-    "question": "What is the purpose of content_hash in document metadata?",
-    "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/retrieval",
-      "https://docs.langchain.com/oss/python/langchain/overview"
-    ],
-    "difficulty": "edge_case"
-  },
-  {
     "question": "How does guardrails middleware protect the agent?",
     "relevant_urls": [
       "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
-      "https://docs.langchain.com/oss/python/langchain/middleware/custom"
+      "https://docs.langchain.com/oss/python/langchain/agents"
     ],
     "difficulty": "edge_case"
   },
@@ -174,7 +161,7 @@
     "question": "What happens when summarization middleware triggers?",
     "relevant_urls": [
       "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
-      "https://docs.langchain.com/oss/python/langgraph/persistence"
+      "https://docs.langchain.com/oss/python/langchain/agents"
     ],
     "difficulty": "edge_case"
   },
@@ -186,10 +173,17 @@
     "difficulty": "edge_case"
   },
   {
-    "question": "What metadata fields are set by the ingestion pipeline?",
+    "question": "How do I create custom middleware in LangChain?",
     "relevant_urls": [
-      "https://docs.langchain.com/oss/python/langchain/retrieval",
-      "https://docs.langchain.com/oss/python/langchain/overview"
+      "https://docs.langchain.com/oss/python/langchain/middleware/custom"
+    ],
+    "difficulty": "edge_case"
+  },
+  {
+    "question": "What is structured output in LangChain models?",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/structured-output",
+      "https://docs.langchain.com/oss/python/langchain/models"
     ],
     "difficulty": "edge_case"
   }

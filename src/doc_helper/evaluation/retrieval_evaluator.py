@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from itertools import product
-from typing import Any
+from typing import Any, Literal
 
 from doc_helper.config.settings import RetrievalSettings, Settings
 from doc_helper.evaluation.retrieval_metrics import (
