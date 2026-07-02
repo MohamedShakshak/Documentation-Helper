@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-DATASET_PATH = Path(__file__).parent / "gold_dataset.json"
+DATASET_PATH = Path(__file__).parent / "generator_dataset.json"
 
 
 def load_gold_dataset() -> list[dict[str, Any]]:

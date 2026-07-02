@@ -1,0 +1,426 @@
+[
+  {
+    "question": "What is LangChain?",
+    "reference_answer": "LangChain is an open-source framework for building applications powered by large language models (LLMs). It provides modular, composable components for chaining prompts, models, tools, memory, and retrieval pipelines together, enabling developers to build complex LLM applications like chatbots, RAG systems, and autonomous agents.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "key_facts": [
+      "framework for building LLM applications",
+      "modular and composable components",
+      "supports chaining prompts, models, tools, memory, and retrieval",
+      "open-source"
+    ]
+  },
+  {
+    "question": "How do I install LangChain?",
+    "reference_answer": "You can install LangChain using pip: `pip install langchain`. For specific integrations, install additional packages like `pip install langchain-community` for third-party integrations or `pip install langchain-openai` for OpenAI-specific providers. LangChain also supports conda installation.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/overview",
+      "https://docs.langchain.com/oss/python/langchain"
+    ],
+    "key_facts": [
+      "pip install langchain",
+      "separate packages for integrations (langchain-community, langchain-openai)",
+      "conda also supported"
+    ]
+  },
+  {
+    "question": "What is LCEL?",
+    "reference_answer": "LCEL (LangChain Expression Language) is a declarative way to compose chains in LangChain. It uses the pipe operator `|` to connect components like prompts, models, and output parsers. LCEL supports streaming, async, batch processing, and fallbacks out of the box, making it the standard way to build chains in modern LangChain.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "key_facts": [
+      "declarative composition using pipe operator",
+      "supports streaming and async",
+      "supports batch processing",
+      "standard way to build chains in modern LangChain"
+    ]
+  },
+  {
+    "question": "How do I create a custom tool in LangChain?",
+    "reference_answer": "You can create a custom tool using the `@tool` decorator from `langchain_core.tools`. The function's docstring serves as the tool description for the LLM, and type hints on the function parameters define the input schema. The tool can then be passed to an agent that decides when to call it.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/tools"
+    ],
+    "key_facts": [
+      "use @tool decorator from langchain_core.tools",
+      "docstring serves as tool description",
+      "type hints define input schema",
+      "tool is passed to agent for invocation"
+    ]
+  },
+  {
+    "question": "What is the difference between Runnable and Chain?",
+    "reference_answer": "In modern LangChain, the Chain interface is deprecated in favor of Runnable. Runnable is the core abstraction that all components (prompts, models, tools, output parsers, retrievers) implement. This enables composition via the pipe operator in LCEL. Chains are now built by piping Runnables together rather than subclassing Chain.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "key_facts": [
+      "Chain interface is deprecated",
+      "Runnable is the core abstraction",
+      "all components implement Runnable",
+      "enables pipe operator composition in LCEL"
+    ]
+  },
+  {
+    "question": "How does streaming work in LangChain?",
+    "reference_answer": "LangChain supports streaming via the `.stream()` and `.astream()` methods on Runnable objects. For event-level streaming, use `.astream_events()` which provides granular events like `on_chat_model_stream`, `on_tool_start`, and `on_tool_end`. This allows real-time token-by-token output and monitoring of intermediate steps in a chain.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models"
+    ],
+    "key_facts": [
+      "stream() and astream() methods on Runnable",
+      "astream_events() for granular events",
+      "events include on_chat_model_stream, on_tool_start, on_tool_end",
+      "enables real-time token-by-token output"
+    ]
+  },
+  {
+    "question": "How do I use ChatPromptTemplate?",
+    "reference_answer": "ChatPromptTemplate allows you to create structured prompts for chat models. You define it with a list of message tuples like `(\"system\", \"You are helpful\")` and `(\"user\", \"{input}\")`, then invoke it with variable values to produce a list of chat messages. It supports partial application and dynamic variable binding.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models"
+    ],
+    "key_facts": [
+      "creates structured prompts for chat models",
+      "defined with message tuples (system, user, etc.)",
+      "invoked with variable values to produce chat messages",
+      "supports partial application"
+    ]
+  },
+  {
+    "question": "What is the purpose of output parsers?",
+    "reference_answer": "Output parsers convert the raw string output of an LLM into structured data. They can parse JSON, extract specific fields, validate formats, and raise exceptions on parse failures. Common parsers include PydanticOutputParser, JsonOutputParser, and StrOutputParser. They integrate with LCEL chains via the pipe operator.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/structured-output"
+    ],
+    "key_facts": [
+      "convert raw LLM output to structured data",
+      "parse JSON and validate formats",
+      "raise exceptions on parse failures",
+      "integrate with LCEL via pipe operator"
+    ]
+  },
+  {
+    "question": "How do I configure an Ollama model in LangChain?",
+    "reference_answer": "Use `from langchain_ollama import ChatOllama` and instantiate with `ChatOllama(model='llama3', base_url='http://localhost:11434')`. You can also set temperature and other model parameters. Ollama must be running locally for this to work, and the model must be pulled with `ollama pull llama3`.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/integrations/providers/overview"
+    ],
+    "key_facts": [
+      "import ChatOllama from langchain_ollama",
+      "configure with model name and base_url",
+      "Ollama must be running locally",
+      "model must be pulled with ollama pull"
+    ]
+  },
+  {
+    "question": "What text splitters are available in LangChain?",
+    "reference_answer": "LangChain provides RecursiveCharacterTextSplitter (recommended default, splits hierarchically on separators), CharacterTextSplitter (splits on single separator), MarkdownHeaderTextSplitter (splits by markdown headers), and TokenTextSplitter (splits by token count). RecursiveCharacterTextSplitter is preferred because it preserves semantic boundaries by trying multiple separators in order.",
+    "difficulty": "simple",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "RecursiveCharacterTextSplitter is recommended default",
+      "MarkdownHeaderTextSplitter splits by headers",
+      "TokenTextSplitter splits by token count",
+      "RecursiveCharacterTextSplitter tries multiple separators in order"
+    ]
+  },
+  {
+    "question": "How do I implement RAG with LangChain?",
+    "reference_answer": "RAG in LangChain involves: loading documents (document loaders), splitting them into chunks (text splitters), creating embeddings (embedding models), storing in a vector store, retrieving relevant chunks for a query (similarity/MMR search), and passing them to the LLM as context to generate a grounded answer. This can be composed using LCEL or the create_agent function.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "load documents with document loaders",
+      "split into chunks with text splitters",
+      "create embeddings and store in vector store",
+      "retrieve relevant chunks and pass to LLM as context",
+      "can be composed with LCEL or create_agent"
+    ]
+  },
+  {
+    "question": "How does MMR (Maximum Marginal Relevance) retrieval work?",
+    "reference_answer": "MMR retrieval selects documents that are both relevant to the query and diverse among themselves. It iteratively selects documents by balancing similarity to the query with dissimilarity to already-selected documents, controlled by a lambda parameter. This reduces redundancy in retrieved results, ensuring a broader coverage of information rather than returning near-duplicate chunks.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "balances relevance to query with diversity among results",
+      "iteratively selects documents",
+      "controlled by lambda parameter",
+      "reduces redundancy in retrieved results"
+    ]
+  },
+  {
+    "question": "What is an agent in LangChain?",
+    "reference_answer": "An agent in LangChain is a system that uses an LLM to decide which tools to call and in what order. The agent observes the user query, selects appropriate tools, interprets results, and iterates until it produces a final answer. Agents can be created with `create_agent()`, which internally uses LangGraph to build a ReAct-style agent with tool-calling capabilities.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langchain/overview"
+    ],
+    "key_facts": [
+      "LLM decides which tools to call and in what order",
+      "agent observes query, selects tools, interprets results, iterates",
+      "created with create_agent()",
+      "internally uses LangGraph for ReAct-style execution"
+    ]
+  },
+  {
+    "question": "How does create_agent work?",
+    "reference_answer": "create_agent builds a tool-calling agent using the LLM and tools you provide. It internally uses LangGraph to create a ReAct-style agent that can call tools, observe results, and generate final answers. It supports middleware for intercepting execution at specific hooks, system prompts for agent behavior, and streaming via astream_events for real-time output.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in"
+    ],
+    "key_facts": [
+      "builds tool-calling agent with LLM and tools",
+      "internally uses LangGraph",
+      "supports middleware for intercepting execution",
+      "supports streaming via astream_events"
+    ]
+  },
+  {
+    "question": "How do I add memory to an agent?",
+    "reference_answer": "To add memory to an agent, pass conversation history in the messages list. ConversationManager or BaseChatMessageHistory can store and retrieve message history from a database like SQLite. In LangGraph, memory can be added via a checkpointer that persists state between runs. The agent receives prior messages as context, enabling multi-turn conversations.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/agents",
+      "https://docs.langchain.com/oss/python/langgraph/persistence"
+    ],
+    "key_facts": [
+      "pass conversation history in messages list",
+      "BaseChatMessageHistory or ConversationManager for storage",
+      "LangGraph checkpointer persists state between runs",
+      "enables multi-turn conversations"
+    ]
+  },
+  {
+    "question": "What is the difference between similarity search and MMR?",
+    "reference_answer": "Similarity search returns the k most similar documents to the query based on embedding distance. MMR (Maximum Marginal Relevance) also returns relevant documents but penalizes redundancy by selecting documents that are different from already-selected ones. Similarity search may return near-duplicate chunks, while MMR provides broader coverage of the topic.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "similarity search returns k most similar by embedding distance",
+      "MMR penalizes redundancy",
+      "similarity search may return near-duplicate chunks",
+      "MMR provides broader coverage"
+    ]
+  },
+  {
+    "question": "How do I use a vector store as a retriever?",
+    "reference_answer": "Call `.as_retriever()` on a vector store to get a Retriever object. Configure `search_type` ('similarity', 'mmr', 'similarity_score_threshold') and `search_kwargs` (like `k` for number of results, `score_threshold` for minimum similarity). The retriever can then be used with LCEL chains or passed to an agent as a tool.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "call as_retriever() on vector store",
+      "configure search_type (similarity, mmr, similarity_score_threshold)",
+      "configure search_kwargs (k, score_threshold)",
+      "retriever can be used with LCEL or as agent tool"
+    ]
+  },
+  {
+    "question": "What is the role of a reranker in retrieval?",
+    "reference_answer": "A reranker re-orders retrieved documents using a cross-encoder model that scores query-document pairs more accurately than embedding-based similarity. FlashRank is one option. Reranking is applied after initial retrieval to improve precision — it doesn't change which documents are retrieved, only their order. This is useful when ranking quality matters more than coverage.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "re-orders documents using cross-encoder model",
+      "scores query-document pairs more accurately than embeddings",
+      "applied after initial retrieval",
+      "improves precision but does not change which documents are retrieved"
+    ]
+  },
+  {
+    "question": "How does SSE streaming work with LangChain agents?",
+    "reference_answer": "Server-Sent Events (SSE) streaming uses `.astream_events()` on the agent to get granular events (on_chat_model_stream, on_tool_start, on_tool_end). Each event is serialized as `event: type\\ndata: json\\n\\n` and sent to the client over HTTP. This enables real-time display of agent reasoning, tool calls, and answer tokens in a web UI.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "key_facts": [
+      "uses astream_events() for granular events",
+      "events include on_chat_model_stream, on_tool_start, on_tool_end",
+      "serialized as event: type + data: json format",
+      "enables real-time display in web UI"
+    ]
+  },
+  {
+    "question": "How do I use LangChain with OpenRouter?",
+    "reference_answer": "Use `from langchain_openai import ChatOpenAI` with `base_url='https://openrouter.ai/api/v1'` and `api_key` set to your OpenRouter key. This lets you access models like GPT-4o, Claude, and Llama through OpenRouter's unified API. OpenRouter handles the routing to different providers behind the scenes.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/models",
+      "https://docs.langchain.com/oss/python/integrations/providers/overview"
+    ],
+    "key_facts": [
+      "use ChatOpenAI from langchain_openai",
+      "set base_url to openrouter endpoint",
+      "set api_key to OpenRouter key",
+      "access multiple model providers through unified API"
+    ]
+  },
+  {
+    "question": "How does guardrails middleware protect the agent?",
+    "reference_answer": "Guardrails middleware validates user input before it reaches the agent. It rejects inputs that are too long (above max_input_length) or classified as off-topic by a guardrail LLM. The middleware intercepts the agent's DefaultModel hook, checks the input, and either blocks it with an error message or allows it to proceed to the agent.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "key_facts": [
+      "validates input before agent processes it",
+      "rejects inputs that are too long",
+      "uses LLM to classify off-topic queries",
+      "intercepts DefaultModel hook"
+    ]
+  },
+  {
+    "question": "What happens when summarization middleware triggers?",
+    "reference_answer": "When conversation history exceeds the summarization threshold (measured in number of messages), older messages are replaced with an LLM-generated summary. This compresses context while preserving key details, keeping the conversation within token limits. The summary becomes the new starting context, and subsequent messages are appended to it.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "key_facts": [
+      "triggers when history exceeds threshold",
+      "older messages replaced with LLM-generated summary",
+      "compresses context while preserving key details",
+      "keeps conversation within token limits"
+    ]
+  },
+  {
+    "question": "How does model fallback middleware work?",
+    "reference_answer": "Model fallback wraps the primary LLM invocation. If the primary model fails (e.g., overloaded, timeout, API error), it creates a fallback LLM with the configured fallback_model and retries the invocation. This is implemented using LangChain's with_fallbacks mechanism, which chains models and automatically falls through to the next on failure.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "key_facts": [
+      "wraps primary LLM invocation",
+      "falls back to secondary model on failure",
+      "implemented using LangChain with_fallbacks",
+      "handles overloaded, timeout, and API errors"
+    ]
+  },
+  {
+    "question": "What is the purpose of tool_retry middleware?",
+    "reference_answer": "tool_retry wraps tool calls with configurable retry logic. If a tool call fails (e.g., network error, timeout), it retries up to max_tool_retries times before raising the final error. This handles transient failures without failing the entire agent run. It supports both sync and async tools.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/built-in",
+      "https://docs.langchain.com/oss/python/langchain/agents"
+    ],
+    "key_facts": [
+      "wraps tool calls with retry logic",
+      "retries up to max_tool_retries times",
+      "handles transient failures (network, timeout)",
+      "supports both sync and async tools"
+    ]
+  },
+  {
+    "question": "How do I create custom middleware in LangChain?",
+    "reference_answer": "Custom middleware extends the `Middleware` base class and implements hooks like `before_model`, `after_model`, `before_tool`, or `after_tool`. Each hook receives the current state and can modify it, log information, or short-circuit execution. Multiple middleware can be chained in an ordered list passed to `create_agent(middleware=[...])`.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/middleware/custom"
+    ],
+    "key_facts": [
+      "extends Middleware base class",
+      "implements hooks (before_model, after_model, before_tool, after_tool)",
+      "hooks can modify state or short-circuit execution",
+      "multiple middleware chained in ordered list"
+    ]
+  },
+  {
+    "question": "What is structured output in LangChain models?",
+    "reference_answer": "Structured output allows LLMs to return data in a structured format like JSON or Pydantic models instead of free text. Use `model.with_structured_output(schema)` where schema is a Pydantic class or JSON schema. The model is prompted to produce output conforming to the schema, and the result is parsed into the specified type automatically.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/structured-output",
+      "https://docs.langchain.com/oss/python/langchain/models"
+    ],
+    "key_facts": [
+      "returns data in structured format (JSON or Pydantic)",
+      "use with_structured_output(schema) method",
+      "schema is Pydantic class or JSON schema",
+      "result parsed into specified type automatically"
+    ]
+  },
+  {
+    "question": "What are the components of a RAG pipeline?",
+    "reference_answer": "A RAG pipeline includes: document loading (crawlers/loaders), text splitting (chunking into manageable pieces), embedding generation (converting text to vectors), vector storage (persisting embeddings in a vector store), retrieval (similarity/MMR search for relevant chunks), optional reranking (cross-encoder re-ordering), and LLM generation with retrieved context as grounding.",
+    "difficulty": "multi_hop",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "document loading with crawlers or loaders",
+      "text splitting into chunks",
+      "embedding generation and vector storage",
+      "retrieval via similarity or MMR search",
+      "optional reranking with cross-encoder",
+      "LLM generation with retrieved context"
+    ]
+  },
+  {
+    "question": "What is the purpose of content_hash in document metadata?",
+    "reference_answer": "content_hash provides a SHA-256 fingerprint of a chunk's text content. It enables deduplication — if the same content is ingested again, it can be detected via metadata filter and skipped, avoiding duplicate vectors in the store. This is particularly useful when re-running ingestion pipelines that may crawl overlapping content.",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "SHA-256 fingerprint of chunk text content",
+      "enables deduplication on re-ingestion",
+      "detected via metadata filter",
+      "avoids duplicate vectors in the store"
+    ]
+  },
+  {
+    "question": "What metadata fields are set by the ingestion pipeline?",
+    "reference_answer": "The pipeline sets: source_url and source_type (from crawlers), doc_title (from HTML title or filename), parent_section and section_heading (from MarkdownHeaderTextSplitter), chunk_index and total_chunks (from splitter), and ingested_at, content_hash, and word_count (from pipeline enrichment).",
+    "difficulty": "edge_case",
+    "relevant_urls": [
+      "https://docs.langchain.com/oss/python/langchain/retrieval"
+    ],
+    "key_facts": [
+      "source_url and source_type from crawlers",
+      "doc_title from HTML title or filename",
+      "parent_section and section_heading from MarkdownSplitter",
+      "chunk_index and total_chunks from splitter",
+      "ingested_at, content_hash, word_count from pipeline"
+    ]
+  }
+]

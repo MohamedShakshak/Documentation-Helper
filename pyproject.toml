@@ -29,7 +29,6 @@ dependencies = [
     "streamlit>=1.40.0",
     "httpx>=0.28.0",
     "langfuse>=2.0.0",
-    "ragas>=0.2.0",
     "html2text>=2025.4.15",
     "beautifulsoup4>=4.15.0",
     "langsmith>=0.9.3",
@@ -47,7 +46,7 @@ dev = [
 
 [project.scripts]
 doc-helper-ingest = "doc_helper.ingestion.pipeline:cli"
-doc-helper-evaluate = "doc_helper.evaluation.runner:cli"
+doc-helper-evaluate = "doc_helper.evaluation.generator_runner:cli"
 doc-helper-retrieval-eval = "doc_helper.evaluation.retrieval_runner:cli"
 
 [build-system]

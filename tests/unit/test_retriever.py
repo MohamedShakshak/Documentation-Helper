@@ -35,7 +35,7 @@ class TestRetriever:
         mock_store.as_retriever.return_value = mock_retriever
         mock_retriever.invoke.return_value = []
 
-        settings = RetrievalSettings(search_type="mmr", search_k=6)
+        settings = RetrievalSettings(search_type="mmr", search_k=6, reranker_enabled=False)
         retriever = Retriever(mock_store, settings)
         retriever.retrieve("test")
 
@@ -54,6 +54,7 @@ class TestRetriever:
             search_type="similarity_score_threshold",
             search_k=4,
             score_threshold=0.7,
+            reranker_enabled=False,
         )
         retriever = Retriever(mock_store, settings)
         retriever.retrieve("test")

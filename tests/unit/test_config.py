@@ -63,10 +63,10 @@ class TestVectorStoreSettings:
 class TestRetrievalSettings:
     def test_defaults(self):
         settings = RetrievalSettings()
-        assert settings.search_type == "similarity"
-        assert settings.search_k == 4
+        assert settings.search_type == "mmr"
+        assert settings.search_k == 8
         assert settings.score_threshold == 0.5
-        assert settings.reranker_enabled is False
+        assert settings.reranker_enabled is True
 
 
 class TestIngestionSettings:
@@ -122,7 +122,7 @@ class TestSettings:
         assert settings.llm.provider == "ollama"
         assert settings.embedding.model in ("bge-small", "bge-base")
         assert settings.vector_store.provider == "chroma"
-        assert settings.retrieval.search_type == "similarity"
+        assert settings.retrieval.search_type in ("similarity", "mmr")
         assert settings.ingestion.crawler == "recursive"
         assert settings.observability.enabled is False
         assert settings.database.url == "sqlite:///./data/doc_helper.db"

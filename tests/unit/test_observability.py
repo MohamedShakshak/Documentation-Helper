@@ -86,7 +86,7 @@ class TestEvaluationDataset:
         assert len(dataset) >= 25
         for item in dataset:
             assert "question" in item
-            assert "answer" in item
+            assert "reference_answer" in item
             assert "difficulty" in item
 
     def test_get_questions_by_difficulty(self):

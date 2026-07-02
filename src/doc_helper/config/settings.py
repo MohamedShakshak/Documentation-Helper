@@ -26,10 +26,10 @@ class VectorStoreSettings(BaseModel):
 
 
 class RetrievalSettings(BaseModel):
-    search_type: Literal["similarity", "mmr", "similarity_score_threshold"] = "similarity"
-    search_k: int = 4
+    search_type: Literal["similarity", "mmr", "similarity_score_threshold"] = "mmr"
+    search_k: int = 8
     score_threshold: float = 0.5
-    reranker_enabled: bool = False
+    reranker_enabled: bool = True
 
 
 class IngestionSettings(BaseModel):

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from doc_helper.config.settings import IngestionSettings
+from doc_helper.config.settings import IngestionSettings, RetrievalSettings
 from doc_helper.retrieval.retriever import Retriever
 from doc_helper.stores.base import BaseVectorStore
 
@@ -11,15 +11,14 @@ from doc_helper.stores.base import BaseVectorStore
 class TestRetrieveContextTool:
     def test_makes_tool_from_retriever(self):
         mock_store = MagicMock(spec=BaseVectorStore)
-        retriever = Retriever(mock_store)
+        retriever = Retriever(mock_store, RetrievalSettings(reranker_enabled=False))
         from doc_helper.agents.tools import _make_retrieval_tool
 
         tool = _make_retrieval_tool(retriever)
         assert tool.name == "retrieve_context"
         assert "content_and_artifact" in tool.response_format
 
-    @patch("doc_helper.retrieval.reranker.Reranker")
-    def test_retrieve_context_serializes_docs(self, _mock_reranker):
+    def test_retrieve_context_serializes_docs(self):
         from doc_helper.agents.tools import _make_retrieval_tool
         from langchain_core.documents import Document
 
@@ -32,7 +31,7 @@ class TestRetrieveContextTool:
         )
         mock_retriever.invoke.return_value = [doc]
 
-        retriever = Retriever(mock_store)
+        retriever = Retriever(mock_store, RetrievalSettings(reranker_enabled=False))
         tool = _make_retrieval_tool(retriever)
         result = tool.invoke({"query": "what is langchain"})
 
@@ -43,8 +42,7 @@ class TestRetrieveContextTool:
         assert "LangChain is a framework" in serialized
         assert "https://example.com/docs" in serialized
 
-    @patch("doc_helper.retrieval.reranker.Reranker")
-    def test_retrieve_context_empty_returns_hint(self, _mock_reranker):
+    def test_retrieve_context_empty_returns_hint(self):
         from doc_helper.agents.tools import _make_retrieval_tool
 
         mock_store = MagicMock(spec=BaseVectorStore)
@@ -52,7 +50,7 @@ class TestRetrieveContextTool:
         mock_store.as_retriever.return_value = mock_retriever
         mock_retriever.invoke.return_value = []
 
-        retriever = Retriever(mock_store)
+        retriever = Retriever(mock_store, RetrievalSettings(reranker_enabled=False))
         tool = _make_retrieval_tool(retriever)
         result = tool.invoke({"query": "nonexistent"})
 
